@@ -1,9 +1,24 @@
 {
   "name": "lockbox",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "description": "A securely encrypted file/message sharing service",
   "author": "swimmadude66",
   "license": "MIT",
+  "main": "dist/server/app.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TetuSecurity/Lockbox.git"
+  },
+  "keywords": [
+    "security",
+    "encryption",
+    "storage",
+    "tetu"
+  ],
+  "bugs": {
+    "url": "https://github.com/TetuSecurity/Lockbox/issues"
+  },
+  "homepage": "https://github.com/TetuSecurity/Lockbox#readme",
   "scripts": {
     "start": "node dist/server/app.js",
     "prebuild": "rimraf dist",
@@ -27,6 +42,7 @@
     "express-useragent": "1.0.12",
     "morgan": "1.9.0",
     "mysql": "2.15.0",
+    "node-jose": "1.0.0",
     "rxjs": "6.1.0",
     "spdy": "3.4.7",
     "uuid": "3.2.1"

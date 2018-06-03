@@ -1,8 +1,9 @@
 import {Router} from 'express';
 import {createHash} from 'crypto';
 import * as uuid from 'uuid/v4';
-import {Observable} from 'rxjs';
-import {flatMap} from 'rxjs/operators';
+import {Observable, from, forkJoin, of as ObservableOf} from 'rxjs';
+import {flatMap, map} from 'rxjs/operators';
+import * as jose from 'node-jose';
 import {Config} from '../models/config';
 
 const COOKIE_OPTIONS = {
@@ -40,42 +41,63 @@ module.exports = (APP_CONFIG: Config) => {
         }
     });
 
-    router.post('/login', (req, res) => {
+    router.post('/login/init', (req, res) => {
         const body = req.body;
-        if (!body || !body.Email || !body.Password) {
-            return res.status(400).send('Email and Password are required fields');
-        } else {
-            db.query('Select `PassHash`, `UserId`, `Salt` from `users` where `Active`=1 AND `Email`=? LIMIT 1;', [body.Email])
-            .pipe(
-                flatMap(
-                    (users: any[]) => {
-                        let user = {UserId: -100, PassHash: '12345', Salt: '12345'}; // use a fake user which will fail to avoid timing differences indicating existence of real users.
-                        if (users.length > 0) {
-                            user = users[0]
-                        }
-                        const compHash = createHash('sha512').update(`${user.Salt}|${body.Password}`).digest('hex');
-                        if (compHash === user.PassHash) {
-                            return sessionManager.createSession(user.UserId, JSON.stringify(res.useragent));
-                        } else {
-                            return Observable.throw('Incorrect username or password');
-                        }
-                    }
-                )
-            ).subscribe(
-                result => {
-                    res.cookie(APP_CONFIG.cookie_name, result.SessionKey, {...COOKIE_OPTIONS, expires: new Date(result.Expires * 1000), secure: req.secure});
-                    return res.send();
-                },
-                err => {
-                    if (err === 'Incorrect username or password') {
-                        return res.status(400).send('Incorrect username or password');
-                    } else {
-                        console.error(err);
-                        return res.status(500).send('Could not login at this time');
-                    }
-                }
-            )
+        if (!body || !body.Email || !body.Nonce) {
+            return res.status(400).send('Email and Nonce are required fields');
         }
+        db.query('Select `PrivateKey`, `PublicKey`, `UserId`, `Salt`, `IV` from `users` where `Active`=1 AND `Email`=? LIMIT 1;', [body.Email])
+        .pipe(
+            flatMap(
+                (users: any[]) => {
+                    if (users.length < 1) {
+                        return Observable.throw('No such known user');
+                    }
+                    const user =  users[0];
+                    const spki = new Buffer(user.PublicKey, 'base64');
+                    const tempKeystore = jose.JWK.createKeyStore();
+                    const challenge = uuid();
+                    const solution = createHash('sha512').update(`${challenge}|${body.Nonce}`).digest('base64');
+                    return forkJoin(
+                        from<jose.JWK.Key>(jose.JWK.asKey(spki, 'spki')),
+                        from<jose.JWK.Key>(tempKeystore.generate(
+                            'oct', 
+                            256, 
+                            {
+                                kid: `${user.UserId}-${body.Nonce}`,
+                                alg: 'A256GCM',
+                                use: 'enc'
+                            }
+                        )),
+                        db.query('Insert into `challenges` (`UserId`, `Solution`, `Nonce`) VALUES (?, ?, ?)', [user.UserId, solution, body.Nonce])
+                        .pipe(
+                            map(result => ({challengeId: result.insertId, challenge}))
+                        ),
+                        ObservableOf({PrivateKey: user.PrivateKey, Salt: user.Salt, IV: user.IV})
+                    );
+                }
+            ),
+            flatMap(([pubkey, encKey, challengeData, userData]) => {
+                return forkJoin(
+                    from<any>(jose.JWE.createEncrypt(encKey).update(challengeData.challenge).final()),
+                    from<any>(jose.JWE.createEncrypt(pubkey).update(encKey).final()),
+                    ObservableOf(challengeData.challengeId),
+                    ObservableOf(userData)
+                )
+            })
+        ).subscribe(
+            ([challenge, challengeKey, challengeId, userData]) => {
+                return res.send({ChallengeId: challengeId, Challenge: challenge, ChallengeKey: challengeKey, ...userData});
+            },
+            err => {
+                if (err === 'No such known user') {
+                    return res.status(400).send('No such known user');
+                } else {
+                    console.error(err);
+                    return res.status(500).send('Could not initiate login at this time');
+                }
+            }
+        )
     });
 
     router.get('/valid', (req, res) => {

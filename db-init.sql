@@ -29,3 +29,17 @@ CREATE TABLE IF NOT EXISTS `sessions` (
   UNIQUE KEY `SessionId_UNIQUE` (`SessionId`),
   UNIQUE KEY `SessionKey_UNIQUE` (`SessionKey`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `challenges` (
+  `ChallengeId` int(11) NOT NULL AUTO_INCREMENT,
+  `UserId` int(11) NOT NULL,
+  `Solution` text NOT NULL,
+  `Nonce` varchar(64) NOT NULL,
+  `Completed` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`ChallengeId`),
+  UNIQUE KEY `ChallengeId_UNIQUE` (`ChallengeId`),
+  UNIQUE KEY `Nonce_UNIQUE` (`Nonce`),
+  KEY `User_idx` (`UserId`),
+  CONSTRAINT `User` FOREIGN KEY (`UserId`) REFERENCES `users` (`UserId`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

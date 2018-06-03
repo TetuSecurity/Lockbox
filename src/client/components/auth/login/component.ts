@@ -37,10 +37,14 @@ export class LoginComponent extends SubscriberComponent {
             this._auth.login(this.form.get('email').value, this.form.get('password').value)
             .subscribe(
                 _ => {
-                    this.form.reset();
-                    this._router.navigate(['/']);
+                    console.log(_);
+                    // this.form.reset();
+                    // this._router.navigate(['/']);
                 },
-                err => this.serverError = 'Could not login at this time'
+                err => {
+                    console.error(err);
+                    this.serverError = 'Could not login at this time';
+                }
             )
         );
 
