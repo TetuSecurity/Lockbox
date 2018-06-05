@@ -23,15 +23,16 @@ export class AuthService {
                     flatMap(passKey => this._crypto.unwrapPrivateKey(passKey, this._crypto.encodeText(response.PrivateKey, 'base64'), this._crypto.encodeText(response.IV, 'base64'))),
                     tap(privKey => console.log('Got priv key', privKey)),
                     tap(privKey => this._crypto.storePrivateKey(privKey)),
-                    flatMap(privKey => this._crypto.unwrapChallengeKey(this._crypto.encodeText(response.ChallengeKey.ciphertext, 'base64'), privKey)),
+                    tap(privKey => console.log('Stored Priv Key', privKey)),
+                    flatMap(privKey => this._crypto.unwrapChallengeKey(this._crypto.encodeText(response.ChallengeKey.encrypted_key, 'base64'), privKey)),
                     tap(chalKey => console.log('Got chal Key', chalKey)),                    
-                    flatMap(chalKey => 
-                        this._crypto.decryptData(
-                            this._crypto.encodeText(response.Challenge.ciphertext, 'base64'),
-                            chalKey,
-                            response.ChallengeKey.iv
-                        )
-                    ),
+                    // flatMap(chalKey => 
+                    //     this._crypto.decryptData(
+                    //         this._crypto.encodeText(response.Challenge.ciphertext, 'base64'),
+                    //         chalKey,
+                    //         response.ChallengeKey.iv
+                    //     )
+                    // ),
                     tap(solution => console.log('Got solution', solution)), 
                     flatMap(solution => this._http.post(`/api/auth/login/${response.ChallengeId}`, {Nonce: nonce, Solution: solution}))
                 )

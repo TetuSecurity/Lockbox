@@ -3,7 +3,6 @@ import {createHash} from 'crypto';
 import * as uuid from 'uuid/v4';
 import {Observable, from, forkJoin, of as ObservableOf} from 'rxjs';
 import {flatMap, map} from 'rxjs/operators';
-import * as jose from 'node-jose';
 import {Config} from '../models/config';
 
 const COOKIE_OPTIONS = {
@@ -20,11 +19,13 @@ module.exports = (APP_CONFIG: Config) => {
 
     router.post('/signup', (req, res) => {
         const body = req.body;
-        if (!body || !body.Email || !body.PrivateKey || !body.PublicKey || !body.Salt  || !body.IV) {
+        if (!body || !body.Email || !body.PrivateKey || !body.PublicKey || !body.Salt  || !body.IV || !body.Password) {
             return res.status(400).send('please verify all required fields are present');
         } else {
-            const q = 'Insert into `users` (`Email`, `Salt`, `IV`, `PrivateKey`, `PublicKey`, `Active`) VALUES(?, ?, ?, ?, ?, 1);'
-            db.query(q, [body.Email, body.Salt, body.IV, body.PrivateKey, body.PublicKey])
+            const passSalt = uuid();
+            const passHash = createHash('sha512').update(`${body.Password}|${passSalt}`).digest('base64');
+            const q = 'Insert into `users` (`Email`, `Salt`, `IV`, `PrivateKey`, `PublicKey`, `Password`, `Active`) VALUES(?, ?, ?, ?, ?, ?, 1);'
+            db.query(q, [body.Email, body.Salt, body.IV, body.PrivateKey, body.PublicKey, `${passHash}|${passSalt}`])
             .pipe(
                 flatMap(result => sessionManager.createSession(result.insertId, JSON.stringify(res.useragent)))
             )
@@ -41,57 +42,38 @@ module.exports = (APP_CONFIG: Config) => {
         }
     });
 
-    router.post('/login/init', (req, res) => {
+    router.post('/login', (req, res) => {
         const body = req.body;
-        if (!body || !body.Email || !body.Nonce) {
-            return res.status(400).send('Email and Nonce are required fields');
+        if (!body || !body.Email || !body.Password) {
+            return res.status(400).send('Email and Password are required fields');
         }
-        db.query('Select `PrivateKey`, `PublicKey`, `UserId`, `Salt`, `IV` from `users` where `Active`=1 AND `Email`=? LIMIT 1;', [body.Email])
+        db.query('Select `Password`, `PrivateKey`, `UserId`, `Salt`, `IV` from `users` where `Active`=1 AND `Email`=? LIMIT 1;', [body.Email])
         .pipe(
             flatMap(
                 (users: any[]) => {
-                    if (users.length < 1) {
-                        return Observable.throw('No such known user');
+                    let user = {UserId: -100, Password: '12345|12345', Salt: '1', IV: '1', PrivateKey: '1'}; // use a fake user which will fail to avoid timing differences indicating existence of real users.
+                    if (users.length > 0) {
+                            user = users[0]
                     }
-                    const user =  users[0];
-                    const spki = new Buffer(user.PublicKey, 'base64');
-                    const tempKeystore = jose.JWK.createKeyStore();
-                    const challenge = uuid();
-                    const solution = createHash('sha512').update(`${challenge}|${body.Nonce}`).digest('base64');
+                    const [passHash, passSalt] = user.Password.split('|');
+                    const compare = createHash('sha512').update(`${body.Password}|${passSalt}`).digest('base64');
+                    if (compare !== passHash) {
+                        return Observable.throw('Incorrect Username or Password');
+                    }
                     return forkJoin(
-                        from<jose.JWK.Key>(jose.JWK.asKey(spki, 'spki')),
-                        from<jose.JWK.Key>(tempKeystore.generate(
-                            'oct', 
-                            256, 
-                            {
-                                kid: `${user.UserId}-${body.Nonce}`,
-                                alg: 'A256GCM',
-                                use: 'enc'
-                            }
-                        )),
-                        db.query('Insert into `challenges` (`UserId`, `Solution`, `Nonce`) VALUES (?, ?, ?)', [user.UserId, solution, body.Nonce])
-                        .pipe(
-                            map(result => ({challengeId: result.insertId, challenge}))
-                        ),
+                        sessionManager.createSession(user.UserId, JSON.stringify(res.useragent)),
                         ObservableOf({PrivateKey: user.PrivateKey, Salt: user.Salt, IV: user.IV})
                     );
                 }
-            ),
-            flatMap(([pubkey, encKey, challengeData, userData]) => {
-                return forkJoin(
-                    from<any>(jose.JWE.createEncrypt(encKey).update(challengeData.challenge).final()),
-                    from<any>(jose.JWE.createEncrypt(pubkey).update(encKey).final()),
-                    ObservableOf(challengeData.challengeId),
-                    ObservableOf(userData)
-                )
-            })
+            )       
         ).subscribe(
-            ([challenge, challengeKey, challengeId, userData]) => {
-                return res.send({ChallengeId: challengeId, Challenge: challenge, ChallengeKey: challengeKey, ...userData});
+            ([session, userData]) => {
+                res.cookie(APP_CONFIG.cookie_name, session.SessionKey, {...COOKIE_OPTIONS, expires: new Date(session.Expires * 1000), secure: req.secure});
+                return res.send(userData);
             },
             err => {
-                if (err === 'No such known user') {
-                    return res.status(400).send('No such known user');
+                if (err === 'Incorrect Username or Password') {
+                    return res.status(400).send('Incorrect Username or Password');
                 } else {
                     console.error(err);
                     return res.status(500).send('Could not initiate login at this time');

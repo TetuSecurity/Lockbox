@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {from, Observable} from 'rxjs';
-import {map} from 'rxjs/operators';
+import {map, tap} from 'rxjs/operators';
 
 @Injectable({
     providedIn: 'root'
@@ -127,7 +127,7 @@ export class CryptoService {
                     hash: {name: 'SHA-512'}
                 },
                 true,
-                ['unwrapKey']
+                ['unwrapKey', 'decrypt']
             )
         );
     }
@@ -156,19 +156,19 @@ export class CryptoService {
                     hash: {name: 'SHA-512'}
                 },
                 true,
-                ['wrapKey', 'unwrapKey']
+                ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
             )
         );
     }
 
     exportPublicKey(publicKey: CryptoKey): Observable<string> {
-        return from<ArrayBuffer>(
+        return from<any>(
             this._crypto.exportKey(
                 'spki',
                 publicKey
             )
         ).pipe(
-            map(buf => this.decodeText(buf))
+            map(buf => this._toPEM(buf))
         );
     }
 
@@ -179,6 +179,8 @@ export class CryptoService {
                 this.encodeText(keystring, 'base64'),
                 {
                     name: 'RSA-OAEP',
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
                     hash: {name: 'SHA-512'}
                 },
                 true,
@@ -188,22 +190,36 @@ export class CryptoService {
     }
 
     // Get AES key used to encrypt challenge
-    unwrapChallengeKey(challengeKey: ArrayBuffer, unwrapper?: CryptoKey): Observable<CryptoKey> {
-        return from<CryptoKey>(
+    unwrapChallengeKey(challengeKey: ArrayBuffer, unwrapper?: CryptoKey): Observable<ArrayBuffer> {
+        return from<ArrayBuffer>(
             this._crypto.unwrapKey(
                 'raw',
                 challengeKey,
                 unwrapper || this._privKey,
                 {
-                    name: 'RSA-OAEP',
-                    hash: {name: 'SHA-512'}
+                    name: "RSA-OAEP",
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+                    hash: {name: "SHA-512"},
                 },
                 {
-                    name: 'AES-GCM',
+                    name: "AES-GCM",
                     length: 256
                 },
                 true,
                 ['decrypt']
+            )
+        );
+    };
+    // Get AES key used to encrypt challenge
+    decryptChallengeKey(challengeKey: ArrayBuffer, unwrapper?: CryptoKey): Observable<ArrayBuffer> {
+        return from<ArrayBuffer>(
+            this._crypto.decrypt(
+                {
+                    name: 'RSA-OAEP'
+                },
+                unwrapper || this._privKey,
+                challengeKey
             )
         );
     };
@@ -218,6 +234,13 @@ export class CryptoService {
         ).pipe(
             map(buf => this.decodeText(buf))
         );
+    }
+
+    private _toPEM(spki: ArrayBuffer): string {
+        const b64key = this.decodeText(spki, 'base64');
+        const pemText = b64key.replace(/(.{64})/g, '$1\n');
+        console.log(pemText);
+        return `-----BEGIN PUBLIC KEY-----\n${pemText}\n-----END PUBLIC KEY-----`
     }
 
 
