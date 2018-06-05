@@ -60,6 +60,18 @@ export class CryptoService {
         }
     }
 
+    // SHA-512
+    hash(data: ArrayBuffer): Observable<ArrayBuffer> {
+        return from<ArrayBuffer>(
+            this._crypto.digest(
+                {
+                    name: 'SHA-512'
+                },
+                data
+            )
+        );
+    }
+
     // PBKDF2
     generatePasswordKey(password: string): Observable<CryptoKey> {
         return from<CryptoKey>(
@@ -127,11 +139,11 @@ export class CryptoService {
                     hash: {name: 'SHA-512'}
                 },
                 true,
-                ['unwrapKey', 'decrypt']
+                ['unwrapKey']
             )
         );
     }
-
+    // decrpyt actual data
     decryptData(data: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer): Observable<ArrayBuffer> {
         return from<ArrayBuffer>(
             this._crypto.decrypt(
@@ -156,7 +168,7 @@ export class CryptoService {
                     hash: {name: 'SHA-512'}
                 },
                 true,
-                ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
+                ['wrapKey', 'unwrapKey']
             )
         );
     }
@@ -188,41 +200,6 @@ export class CryptoService {
             )
         );
     }
-
-    // Get AES key used to encrypt challenge
-    unwrapChallengeKey(challengeKey: ArrayBuffer, unwrapper?: CryptoKey): Observable<ArrayBuffer> {
-        return from<ArrayBuffer>(
-            this._crypto.unwrapKey(
-                'raw',
-                challengeKey,
-                unwrapper || this._privKey,
-                {
-                    name: "RSA-OAEP",
-                    modulusLength: 2048,
-                    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-                    hash: {name: "SHA-512"},
-                },
-                {
-                    name: "AES-GCM",
-                    length: 256
-                },
-                true,
-                ['decrypt']
-            )
-        );
-    };
-    // Get AES key used to encrypt challenge
-    decryptChallengeKey(challengeKey: ArrayBuffer, unwrapper?: CryptoKey): Observable<ArrayBuffer> {
-        return from<ArrayBuffer>(
-            this._crypto.decrypt(
-                {
-                    name: 'RSA-OAEP'
-                },
-                unwrapper || this._privKey,
-                challengeKey
-            )
-        );
-    };
 
     // Only use to store against refreshes, do not use outside this service
     private _exportPrivateKey(privateKey: CryptoKey): Observable<string> {

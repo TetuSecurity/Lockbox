@@ -37,9 +37,8 @@ export class LoginComponent extends SubscriberComponent {
             this._auth.login(this.form.get('email').value, this.form.get('password').value)
             .subscribe(
                 _ => {
-                    console.log(_);
-                    // this.form.reset();
-                    // this._router.navigate(['/']);
+                    this.form.reset();
+                    this._router.navigate(['/']);
                 },
                 err => {
                     console.error(err);

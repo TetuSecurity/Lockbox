@@ -34,7 +34,6 @@
     "build-client": "gulp webpack"
   },
   "dependencies": {
-    "@trust/webcrypto": "^0.9.2",
     "body-parser": "1.18.2",
     "compression": "1.7.2",
     "cookie-parser": "1.4.3",
@@ -43,7 +42,6 @@
     "express-useragent": "1.0.12",
     "morgan": "1.9.0",
     "mysql": "2.15.0",
-    "node-jose": "1.0.0",
     "rxjs": "6.1.0",
     "spdy": "3.4.7",
     "uuid": "3.2.1"

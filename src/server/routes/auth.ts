@@ -1,7 +1,7 @@
 import {Router} from 'express';
 import {createHash} from 'crypto';
 import * as uuid from 'uuid/v4';
-import {Observable, from, forkJoin, of as ObservableOf} from 'rxjs';
+import {Observable, from, forkJoin, of as ObservableOf, throwError} from 'rxjs';
 import {flatMap, map} from 'rxjs/operators';
 import {Config} from '../models/config';
 
@@ -57,8 +57,9 @@ module.exports = (APP_CONFIG: Config) => {
                     }
                     const [passHash, passSalt] = user.Password.split('|');
                     const compare = createHash('sha512').update(`${body.Password}|${passSalt}`).digest('base64');
+                    console.log(compare);
                     if (compare !== passHash) {
-                        return Observable.throw('Incorrect Username or Password');
+                        return throwError('Incorrect Username or Password');
                     }
                     return forkJoin(
                         sessionManager.createSession(user.UserId, JSON.stringify(res.useragent)),
