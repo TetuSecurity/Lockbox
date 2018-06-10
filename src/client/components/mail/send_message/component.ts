@@ -48,23 +48,20 @@ export class SendMessageComponent extends SubscriberComponent {
         this.sending = true;
         this.addSubscription(
             this._encryptInfo(
-                [this.messageForm.get('recipient').value],
+                this.messageForm.get('recipient').value,
                 this.messageForm.get('includeSender').value,
                 this.isFile,
                 this.messageForm.get('subject').value,
                 this.isFile ? this.messageForm.get('file').value : this.messageForm.get('messageText').value
             ).pipe(
-                flatMap(msgMap => {
-                    const requests = Object.keys(msgMap).map(addr => this._mail.sendMessage(addr, msgMap[addr]));
-                    return forkJoin(...requests);
-                }),
+                flatMap(msg => this._mail.sendMessage(this.messageForm.get('recipient').value, msg)),
                 finalize(() => this.sending = false)
             )
             .subscribe(_ => console.log(_), err => console.error(err))
         );
     }
 
-    private _encryptInfo(rcp: string[], includeSender: boolean, isFile: boolean, subject: string, contents: string): Observable<{[key: string]: SecureMessage}> {
+    private _encryptInfo(rcp: string, includeSender: boolean, isFile: boolean, subject: string, contents: string): Observable<SecureMessage> {
 
         let contentsBuffer = contents;
         if (!isFile) {
@@ -76,7 +73,6 @@ export class SendMessageComponent extends SubscriberComponent {
             flatMap(aeskey => {
                 const metadata: SecureMetadata = {
                     ContentsType: isFile ? 'file' : 'message',
-                    Recipient: rcp,
                     Sender: includeSender ? this._auth.getUserEmail() : undefined,
                     Subject: subject
                 };
@@ -94,29 +90,21 @@ export class SendMessageComponent extends SubscriberComponent {
                         iv
                     ),
                     ObservableOf({Key: aeskey, IV: iv}),
-                    ...(rcp.map(r =>  this._mail.getPublicKey(r)))
+                    this._mail.getPublicKey(rcp)
                 )
             }),
-            flatMap(([encryptedMetadata, encryptedData, keyInfo, ...keys]) => {
-                return forkJoin(
-                    ...(keys.map(pub => this._crypto.wrapCEK(keyInfo.Key, pub.Key)
-                                .pipe(
-                                    map(wrappedCek => ({Address: pub.Address, Key: wrappedCek}))
-                                )
-                            )
-                        )
-                ).pipe(
-                    map((encKeys: {Address:string, Key: ArrayBuffer}[])  => {
-                        return encKeys.reduce((prev, encKey) => {
-                            const message: SecureMessage = {
-                                EncryptedKey: this._crypto.decodeText(encKey.Key, 'base64'),
-                                IV: keyInfo.IV,
-                                Metadata: encryptedMetadata,
-                                Contents: encryptedData
-                            };
-                            prev[encKey.Address] = message;
-                            return prev;
-                        }, {});
+            flatMap(([encryptedMetadata, encryptedData, keyInfo, rcp]) => {
+                return this._crypto.wrapCEK(keyInfo.Key, rcp.Key)
+                .pipe(
+                    map(wrappedCek => ({Address: rcp.Address, Key: wrappedCek})),
+                    map((encKey: {Address:string, Key: ArrayBuffer})  => {
+                        const message: SecureMessage = {
+                            EncryptedKey: this._crypto.decodeText(encKey.Key, 'base64'),
+                            IV: this._crypto.decodeText(keyInfo.IV, 'base64'),
+                            Metadata: this._crypto.decodeText(encryptedMetadata,'base64'),
+                            Contents: this._crypto.decodeText(encryptedData, 'base64'),
+                        };
+                        return message;
                     })
                 )
             })

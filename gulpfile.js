@@ -30,13 +30,10 @@ gulp.task('webpack', function(done) {
         if (err) {
             console.error(err);
         }
-        if (stats.hasErrors()) {
-            if (stats.compilation.errors) {
-                stats.compilation.errors.forEach(function(e){console.error(e,'\n');});
-            } else {
-                console.log(stats);
-            }
+        if (stats.hasErrors() && stats.compilation.errors) {
+            stats.compilation.errors.forEach(function(e){console.error(e,'\n');});
         }
+        console.log(stats.toString());
         return done(err);
     });
 });
@@ -69,13 +66,10 @@ gulp.task('webpack-watch', function() {
         if (err) {
             console.error(err);
         }
-        if (stats.hasErrors()) {
-            if (stats.compilation.errors) {
-                stats.compilation.errors.forEach(function(e){console.error(e,'\n');});
-            } else {
-                console.log(stats);
-            }
+        if (stats.hasErrors() && stats.compilation.errors) {
+            stats.compilation.errors.forEach(function(e){console.error(e,'\n');});
         }
+        console.log(stats.toString());
     });
 });
 

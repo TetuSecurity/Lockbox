@@ -1,0 +1,10 @@
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-md-6 col-md-offset-3">
+            <h1>{{message.Metadata.Subject}}</h1>
+            <h2 *ngIf="message.Metadata.Sender">From: {{message.Metadata.Sender}}</h2>
+
+            <p>{{message.Contents}}</p>
+        </div>
+    </div>
+</div>

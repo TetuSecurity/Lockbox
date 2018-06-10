@@ -14,7 +14,7 @@ export interface Message {
 
 export interface SecureMetadata {
     Sender?: string; // Replace with encrypted user object to verify key
-    Recipient?: string[];
+    Recipient?: string;
     Subject: string; // message subject or filename
     ContentsType: 'message'|'file';
 }

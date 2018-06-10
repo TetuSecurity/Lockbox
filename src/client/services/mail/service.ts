@@ -18,12 +18,13 @@ export class MailService {
     getPublicKey(keyholder: string): Observable<{Address: string, Key: CryptoKey}> {
         return this._http.post<{Address: string, Key: string}>('/api/mail/keys/search', {Email: keyholder})
         .pipe(
-            flatMap(response => 
-                this._crypto.importPublicKey(this._crypto.encodeText(response.Key, 'base64'))
+            flatMap(response => {
+                console.log(response);
+                return this._crypto.importPublicKey(this._crypto.encodeText(response.Key, 'base64'))
                 .pipe(
                     map((key: CryptoKey) => ({Address: response.Address, Key: key}))
                 )
-            )
+            })
         );
     }
 

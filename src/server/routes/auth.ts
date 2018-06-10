@@ -87,6 +87,10 @@ module.exports = (APP_CONFIG: Config) => {
         return res.send(!!res.locals.usersession);
     });
 
+    router.get('/info', (req, res) => {
+        return res.send(res.locals.usersession);
+    });
+
     router.get('/sessions', (req, res) => {
         if (!res.locals.usersession || !res.locals.usersession.UserId) {
             return res.send([]);

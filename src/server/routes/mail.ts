@@ -17,7 +17,7 @@ module.exports = (APP_CONFIG: Config) => {
                     return res.status(400).send('Could not find key');
                 } else {
                     const key = results[0];
-                    return res.send({Address: body.Email, Key: key});
+                    return res.send({Address: body.Email, Key: key.PublicKey});
                 }
             }
         )
