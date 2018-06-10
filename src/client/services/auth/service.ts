@@ -1,7 +1,7 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable, forkJoin, of as ObservableOf} from 'rxjs';
-import {map, flatMap, tap} from 'rxjs/operators';
+import {map, flatMap, tap, finalize} from 'rxjs/operators';
 import {CryptoService} from '@services/crypto/service';
 import {LoginResponse} from '@models/';
 
@@ -9,10 +9,22 @@ import {LoginResponse} from '@models/';
     providedIn: 'root'
 })
 export class AuthService {
+
+    private _userInfo: LoginResponse;
+    
     constructor(
         private _http: HttpClient,
         private _crypto: CryptoService
-    ) {}
+    ) {
+        try {
+            const ui = sessionStorage.getItem('_ui');
+            if (ui) {
+                this._userInfo = JSON.parse(new Buffer(ui, 'base64').toString('base64'));
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
 
     login(email: string, password: string): Observable<any> {
         return this._crypto.hash(this._crypto.encodeText(password))
@@ -21,9 +33,10 @@ export class AuthService {
                 const passHash = this._crypto.decodeText(passbuf, 'hex');
                 return forkJoin(
                     this._http.post<LoginResponse>('/api/auth/login/', {Email: email, Password: passHash}),
-                    this._crypto.generatePasswordKey(password)
+                    this._crypto.generatePasswordKey(this._crypto.encodeText(password, 'utf8'))
                 );
             }),
+            tap(([response, passKey]) => this._storeUserInfo(response)),
             flatMap(([response, passKey]) => 
                 forkJoin(
                     ObservableOf(response),
@@ -43,10 +56,11 @@ export class AuthService {
     }
 
     signup(email: string, password: string): Observable<any> {
-        const salt = this._crypto.generateSalt();
-        const iv = this._crypto.generateSalt();
+        const salt = this._crypto.generateRandomness();
+        const iv = this._crypto.generateRandomness();
         return forkJoin(
-            this._crypto.generatePasswordKey(password).pipe(
+            this._crypto.generatePasswordKey(this._crypto.encodeText(password, 'utf8'))
+            .pipe(
                 flatMap(passKey => this._crypto.deriveWrapper(passKey, salt)),
             ),
             this._crypto.generateKeypair()
@@ -66,11 +80,44 @@ export class AuthService {
     }
 
     logOut(): Observable<any> {
-        return this._http.post<void>('/api/auth/logout', {});
+        return this._http.post<void>('/api/auth/logout', {}).pipe(
+            finalize(() => this._crypto.cleanup())
+        );
     }
 
     isLoggedIn(): Observable<boolean> {
-        return this._http.get<boolean>('/api/auth/valid');
+        return this._http.get<boolean>('/api/auth/valid')
+        .pipe(
+            tap(isLoggedIn => {
+                if (isLoggedIn && !this._userInfo) {
+                    this.getUserInfo().subscribe(_ => _); // fetch keys again on resumed session
+                }
+            })
+        );
+    }
+
+    getUserEmail(): string {
+        if (this._userInfo && this._userInfo.Email) {
+            return this._userInfo.Email;
+        } else {
+            return undefined;
+        }
+    }
+
+    getUserInfo(): Observable<LoginResponse> {
+        return this._http.get<LoginResponse>('/api/auth/info')
+        .pipe(
+            tap(info => this._storeUserInfo(info))
+        );
+    }
+
+    private _storeUserInfo(info: LoginResponse) {
+        this._userInfo = info;
+        try {
+            sessionStorage.setItem('_ui', new Buffer(JSON.stringify(info), 'utf8').toString('base64'));
+        } catch (e) {
+            console.error(e);
+        }
     }
 
 }

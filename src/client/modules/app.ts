@@ -16,7 +16,7 @@ import {IsLoggedInGuard, NotLoggedInGuard} from '@guards/'
             [
                 {path: 'login', canActivate: [NotLoggedInGuard], component: LoginComponent},
                 {path: 'signup', canLoad: [NotLoggedInGuard], canActivateChild: [NotLoggedInGuard], loadChildren: './routes/+signup#SignupLazyModule'},
-                {path: '', canLoad: [IsLoggedInGuard], canActivateChild: [IsLoggedInGuard], loadChildren: './routes/+demo#DemoLazyModule'},
+                {path: '', canLoad: [IsLoggedInGuard], canActivateChild: [IsLoggedInGuard], loadChildren: './routes/+mail#MailLazyModule'},
             ]
         )
     ],

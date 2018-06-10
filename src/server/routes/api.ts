@@ -51,6 +51,7 @@ module.exports = (APP_CONFIG: Config) => {
     });
 
     // PRIVATE ROUTES GO BELOW HERE
+    router.use('/mail', require('./mail')(APP_CONFIG));
 
     // Return middleware router
     return router;

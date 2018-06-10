@@ -63,7 +63,7 @@ module.exports = (APP_CONFIG: Config) => {
                     }
                     return forkJoin(
                         sessionManager.createSession(user.UserId, JSON.stringify(res.useragent)),
-                        ObservableOf({PrivateKey: user.PrivateKey, Salt: user.Salt, IV: user.IV})
+                        ObservableOf({Email: body.Email, PrivateKey: user.PrivateKey, Salt: user.Salt, IV: user.IV})
                     );
                 }
             )       

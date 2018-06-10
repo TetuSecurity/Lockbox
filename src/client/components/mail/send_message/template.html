@@ -1,0 +1,28 @@
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-md-6 col-md-offset-3">
+            <h1>Send a message</h1>
+            <form [formGroup]="messageForm" (submit)="messageForm.valid && sendMessages()">
+                <label for="recipient">recipient</label>
+                <input type="email" name="recipient" formControlName="recipient" id="recipient" required>
+                <label for="includeSender">includeSender</label>
+                <input type="checkbox" name="includeSender" formControlName="includeSender" id="includeSender" required>
+                <label for="isFile">isFile</label>
+                <input type="checkbox" name="isFile" formControlName="isFile" id="isFile">
+                <ng-container *ngIf="isFile">
+                    <label for="file">file</label>
+                    <input type="file" id="file" (change)="fileChange($event)">
+                </ng-container>
+                <ng-container *ngIf="!isFile">
+                    <label for="subject">Subject</label>
+                    <input type="text" name="subject" formControlName="subject" id="subject" required>
+                    <label for="messageText">Message</label>
+                    <input type="textarea" formControlName="messageText" id="messageText" required>
+                </ng-container>
+                <button class="btn btn-primary" type="submit">
+                    Send
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

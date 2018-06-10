@@ -47,7 +47,7 @@ gulp.task('webpack-watch', function() {
     config.watch = true;
     config.cache = true;
     config.bail = false;
-    config.devtool = 'eval';
+    // config.devtool = 'eval';
     config.stats = 'errors-only';
     config.module.rules.push(
         {

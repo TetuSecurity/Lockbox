@@ -50,7 +50,7 @@ var config = {
                             plugins: function(loader){
                                 return [
                                     autoprefixer({remove: false, flexbox: true}),
-                                    cssnano
+                                    cssnano({zindex: false})
                                 ];
                             }
                         }
@@ -79,7 +79,7 @@ var config = {
                                 plugins: function(loader){
                                     return [
                                         autoprefixer({remove: false, flexbox: true}),
-                                        cssnano
+                                        cssnano({zindex: false})
                                     ];
                                 }
                             }

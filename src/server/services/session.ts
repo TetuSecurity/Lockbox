@@ -1,10 +1,10 @@
 import {Observable} from 'rxjs';
-import {map} from 'rxjs/operators';
+import {map, flatMap} from 'rxjs/operators';
 import * as uuid from 'uuid/v4';
 import {DatabaseService} from './db';
 import {UserSession, SessionInfo} from '../models/auth';
 
-const EXPIRATION_SECONDS = (30 * 24 * 60 * 60); // 30 day expiration for now
+const EXPIRATION_SECONDS = (12 * 60 * 60); // 12 hour expiration for now
 
 export class SessionManager {
     constructor (private _db: DatabaseService) {}
@@ -52,6 +52,9 @@ export class SessionManager {
 
     updateAccess(sessionKey: string): Observable<any> {
         const now = Math.floor(new Date().valueOf()/1000);
-        return this._db.query('Update `sessions` SET `LastUsed`=? WHERE `SessionKey`=?', [now, sessionKey]);
+        return this._db.query('Update `sessions` SET `LastUsed`=? WHERE `SessionKey`=?', [now, sessionKey])
+        .pipe(
+            flatMap(_ => this._db.query('UPDATE `sessions` set `Active`=0 WHERE `Expires` <= ?', [now])) // reap expired sessions
+        );
     }
 }

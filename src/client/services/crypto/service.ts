@@ -26,16 +26,16 @@ export class CryptoService {
         return !!this._crypto;
     }
 
-    generateSalt(): ArrayBuffer {
-        return this._cryptoHelpers.getRandomValues(new Uint8Array(16)).buffer;
+    generateRandomness(length: number = 16): ArrayBuffer {
+        return this._cryptoHelpers.getRandomValues(new Uint8Array(length)).buffer;
     }
 
-    encodeText(str: string, enc?: string): ArrayBuffer {
-        return new Buffer(str, enc).buffer;
+    encodeText(str: string, source_encoding?: string): ArrayBuffer {
+        return new Buffer(str, source_encoding).buffer;
     }
 
-    decodeText(txt: ArrayBuffer, enc?: string): string {
-        return Buffer.from(txt).toString(enc || 'base64');
+    decodeText(buf: ArrayBuffer, target_encoding?: string): string {
+        return Buffer.from(buf).toString(target_encoding || 'base64');
     }
 
     storePrivateKey(key: CryptoKey) {
@@ -55,8 +55,23 @@ export class CryptoService {
     loadPrivateKey() {
         const saved_pk = sessionStorage.getItem('_pk');
         if (saved_pk) {
-            this.importPrivateKey(saved_pk)
-            .subscribe(key => this._privKey = key);
+            this.importPrivateKey(this.encodeText(saved_pk, 'base64'))
+            .subscribe(
+                key => this._privKey = key,
+                err => {
+                    throw(err);
+                }
+            );
+        }
+    }
+
+    // run on logout to make sure no stored keys are left
+    cleanup() {
+        this._privKey = undefined;
+        try {
+            sessionStorage.delete('_pk');
+        } catch (e) {
+            console.log(e);
         }
     }
 
@@ -73,11 +88,11 @@ export class CryptoService {
     }
 
     // PBKDF2
-    generatePasswordKey(password: string): Observable<CryptoKey> {
+    generatePasswordKey(password: ArrayBuffer): Observable<CryptoKey> {
         return from<CryptoKey>(
             this._crypto.importKey(
                 'raw',
-                this.encodeText(password),
+                password,
                 {name: 'PBKDF2'},
                 false,
                 ['deriveKey']
@@ -106,6 +121,19 @@ export class CryptoService {
     }
 
     // AES-GCM
+    generateAESKey(): Observable<CryptoKey> {
+        return from<CryptoKey>(
+            this._crypto.generateKey(
+                {
+                    name: 'AES-GCM',
+                    length: 256
+                },
+                true,
+                ['encrypt', 'decrypt']
+            )
+        );
+    }
+
     // Encrypt the RSA Private Key for storage on server
     wrapPrivateKey(wrappingKey: CryptoKey, privateKey: CryptoKey, iv: ArrayBuffer): Observable<string> {
         return from<ArrayBuffer>(
@@ -143,7 +171,21 @@ export class CryptoService {
             )
         );
     }
-    // decrpyt actual data
+    // encrypt actual data
+    encryptData(data: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer): Observable<ArrayBuffer> {
+        return from<ArrayBuffer>(
+            this._crypto.encrypt(
+                {
+                    name: 'AES-GCM',
+                    iv
+                },
+                key,
+                data
+            )
+        );
+    }
+
+    // decrypt actual data
     decryptData(data: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer): Observable<ArrayBuffer> {
         return from<ArrayBuffer>(
             this._crypto.decrypt(
@@ -173,6 +215,42 @@ export class CryptoService {
         );
     }
 
+    wrapCEK(key: CryptoKey, wrapper: CryptoKey): Observable<ArrayBuffer> {
+        return from<ArrayBuffer>(
+            this._crypto.wrapKey(
+                'raw',
+                key,
+                wrapper,
+                {
+                    name: 'RSA-OAEP',
+                    hash: {name: 'SHA-512'},
+                }
+            )
+        );
+    }
+
+    unwrapCEK(wrapped: ArrayBuffer, unwrapper?: CryptoKey): Observable<CryptoKey> {
+        return from<CryptoKey>(
+            this._crypto.unwrapKey(
+                'raw',
+                wrapped,
+                unwrapper || this._privKey,
+                {
+                    name: 'RSA-OAEP',
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+                    hash: {name: 'SHA-512'},
+                },
+                {
+                    name: 'AES-GCM',
+                    length: 256
+                },
+                false,
+                ['decrypt']
+            )
+        );
+    }
+
     exportPublicKey(publicKey: CryptoKey): Observable<string> {
         return from<any>(
             this._crypto.exportKey(
@@ -180,15 +258,30 @@ export class CryptoService {
                 publicKey
             )
         ).pipe(
-            map(buf => this._toPEM(buf))
+            map(buf => this.decodeText(buf, 'base64'))
         );
     }
 
-    importPrivateKey(keystring: string): Observable<CryptoKey> {
+    importPublicKey(keystring: ArrayBuffer): Observable<CryptoKey> {
+        return from<CryptoKey>(
+            this._crypto.importKey(
+                'spki',
+                keystring,
+                {
+                    name: 'RSA-OAEP',
+                    hash: {name: 'SHA-512'}
+                },
+                true,
+                ['wrapKey']
+            )
+        );
+    }
+
+    importPrivateKey(keystring: ArrayBuffer): Observable<CryptoKey> {
         return from<CryptoKey>(
             this._crypto.importKey(
                 'pkcs8',
-                this.encodeText(keystring, 'base64'),
+                keystring,
                 {
                     name: 'RSA-OAEP',
                     modulusLength: 2048,
@@ -209,16 +302,7 @@ export class CryptoService {
                 privateKey
             )
         ).pipe(
-            map(buf => this.decodeText(buf))
+            map(buf => this.decodeText(buf, 'base64'))
         );
     }
-
-    private _toPEM(spki: ArrayBuffer): string {
-        const b64key = this.decodeText(spki, 'base64');
-        const pemText = b64key.replace(/(.{64})/g, '$1\n');
-        console.log(pemText);
-        return `-----BEGIN PUBLIC KEY-----\n${pemText}\n-----END PUBLIC KEY-----`
-    }
-
-
 }
