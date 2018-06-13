@@ -10,6 +10,7 @@ const COOKIE_OPTIONS = {
     httpOnly: true,
     signed: true,
     sameSite: true,
+    expires: 0 // for session cookie
 };
 
 module.exports = (APP_CONFIG: Config) => {
@@ -31,7 +32,7 @@ module.exports = (APP_CONFIG: Config) => {
             )
             .subscribe(
                 result => {
-                    res.cookie(APP_CONFIG.cookie_name, result.SessionKey, {...COOKIE_OPTIONS, expires: new Date(result.Expires * 1000), secure: req.secure});
+                    res.cookie(APP_CONFIG.cookie_name, result.SessionKey, {...COOKIE_OPTIONS, secure: req.secure});
                     return res.send();
                 },
                 err => {
@@ -57,7 +58,6 @@ module.exports = (APP_CONFIG: Config) => {
                     }
                     const [passHash, passSalt] = user.Password.split('|');
                     const compare = createHash('sha512').update(`${body.Password}|${passSalt}`).digest('base64');
-                    console.log(compare);
                     if (compare !== passHash) {
                         return throwError('Incorrect Username or Password');
                     }
@@ -69,7 +69,7 @@ module.exports = (APP_CONFIG: Config) => {
             )       
         ).subscribe(
             ([session, userData]) => {
-                res.cookie(APP_CONFIG.cookie_name, session.SessionKey, {...COOKIE_OPTIONS, expires: new Date(session.Expires * 1000), secure: req.secure});
+                res.cookie(APP_CONFIG.cookie_name, session.SessionKey, {...COOKIE_OPTIONS, secure: req.secure});
                 return res.send(userData);
             },
             err => {

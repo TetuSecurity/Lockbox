@@ -62,6 +62,9 @@ app.use('/api', require('./routes/api')(APP_CONFIG));
 
 /*------- Angular client on Root ------- */
 app.set('view engine', 'html');
+app.get(/.*\.map$/, (req, res) => {
+    return res.status(501).send('no map for you!');
+});
 app.use(express.static(APP_CONFIG.client_root, {maxAge: 0}));
 app.get('/*', function(req, res){
   return res.sendFile(join(APP_CONFIG.client_root, './index.html'));
