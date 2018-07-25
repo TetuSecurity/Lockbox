@@ -6,7 +6,10 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="manifest" href="/assets/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="msapplication-starturl" content="/">
+    <link rel="manifest" type="application/manifest+json" href="/manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/android-chrome-192x192.png">
@@ -23,6 +26,13 @@
             // Use the window load event to keep the page load performant
             window.addEventListener('load', function() {
               navigator.serviceWorker.register('/sw.js');
+            });
+            window.addEventListener('beforeinstallprompt', function(e) {
+              // Prevent Chrome 67 and earlier from automatically showing the prompt
+              e.preventDefault();
+              // Stash the event so it can be triggered later.
+              deferredPrompt = e;
+              console.log('App can be installed');
             });
         }
     </script>

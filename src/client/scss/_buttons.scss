@@ -9,30 +9,46 @@
     }
 }
 
-@mixin button-inverse($background, $text) {
-    @include button($text, $background);
-    border: 0.1rem solid $background;
+@mixin button-inverse($text, $background) {
+    background-color: $background;
+    color: $text;
+    border: 0.1rem solid $text;
+    &:hover {
+        background-color: $text;
+        color: $background;
+    }
 }
 
-button {
+button,a[role="button"] {
     box-sizing: border-box;
     display: block;
     cursor: pointer;
 
     &:disabled {
-        background-color: #ccc !important;
-        color: #999;
+        background-color: $almost-white;
+        color: $disabled-text;
         cursor: not-allowed;
+
+        &:hover {
+            background-color: $almost-white;
+            color: $disabled-text;
+        }
     }
 }
 
 .btn {
-    border-radius: $base-border-radius;
-    padding: 0.5rem 1rem;
+    border-radius: $btn-border-radius;
+    padding: 1.2rem 1rem;
     font-size: 2rem;
     width: 100%;
+    font-size: 1.7rem;
+    line-height: 2rem;
+    font-weight: 500;
+    outline: none;
+    margin: 2rem 0;
+
     @media(min-width: $screen-md-min) {
-        width: unset;
+        // min-width: 32rem;
     }
 }
 

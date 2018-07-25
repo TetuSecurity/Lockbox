@@ -9,7 +9,6 @@
                         type="email"
                         name="email"
                         [formControl]="formControls['email']"
-                        [errors]="formControls['email']?.errors"
                         label="Email"
                         placeholder="Email"
                         autocomplete="email"
@@ -19,13 +18,13 @@
                         type="password"
                         name="password"
                         [formControl]="formControls['password']"
-                        [errors]="formControls['password']?.errors"
+                        [passwordButton]="true"
                         label="Password"
                         placeholder="Password"
                         autocomplete="current-password"
                     ></input-group>
-                    <button class="btn btn-success d-inlineblock" type="submit" [disabled]="form.invalid">Log In</button>
-                    <a [routerLink]="['/signup']" class="d-inlineblock pull-right">Sign up instead</a>
+                    <button class="btn btn-primary d-inlineblock" type="submit" [disabled]="form.invalid">Log In</button>
+                    <a [routerLink]="['/signup']" class="signup-text">Sign up instead</a>
                 </form>
                 <span class="error-text" *ngIf="serverError?.length">{{serverError}}</span>
             </div>

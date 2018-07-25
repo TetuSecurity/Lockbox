@@ -19,5 +19,11 @@
 .form-title {
     font-size: 3rem;
     margin: 2rem auto;
-    color: $main_color;
+    color: $main-color;
+}
+
+.login-text {
+    margin: 2rem auto;
+    text-align: center;
+    display: inline-block;
 }

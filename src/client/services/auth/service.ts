@@ -1,8 +1,9 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {Observable, forkJoin, of as ObservableOf} from 'rxjs';
-import {map, flatMap, tap, finalize} from 'rxjs/operators';
+import {Observable, forkJoin, of as ObservableOf, empty, of} from 'rxjs';
+import {map, flatMap, tap, finalize, catchError} from 'rxjs/operators';
 import {CryptoService} from '@services/crypto/service';
+import {BrowserStorageService, HttpCacheService} from '@services/caching';
 import {LoginResponse} from '@models/';
 
 @Injectable({
@@ -14,10 +15,12 @@ export class AuthService {
     
     constructor(
         private _http: HttpClient,
-        private _crypto: CryptoService
+        private _cache: HttpCacheService,
+        private _crypto: CryptoService,
+        private _store: BrowserStorageService
     ) {
         try {
-            const ui = sessionStorage.getItem('_ui');
+            const ui = this._store.getItem('_ui', ['session', 'memory']);
             if (ui) {
                 this._userInfo = JSON.parse(new Buffer(ui, 'base64').toString('base64'));
             }
@@ -80,13 +83,23 @@ export class AuthService {
     }
 
     logOut(): Observable<any> {
-        return this._http.post<void>('/api/auth/logout', {}).pipe(
-            finalize(() => this._crypto.cleanup())
+        return this._http.post<void>('/api/auth/logout', {})
+        .pipe(
+            catchError(e => of(null)),
+            finalize(() => {
+                this._crypto.cleanup();
+                this._store.clearStorage();
+                this._cache.clearCache();
+            })
         );
     }
 
     isLoggedIn(): Observable<boolean> {
-        return this._http.get<boolean>('/api/auth/valid')
+        return this._cache.cacheRequest<boolean>(
+            'auth_valid',
+            this._http.get<boolean>('/api/auth/valid'),
+            {cacheTime: 5000}
+        )
         .pipe(
             tap(isLoggedIn => {
                 if (isLoggedIn && !this._userInfo) {
@@ -105,7 +118,11 @@ export class AuthService {
     }
 
     getUserInfo(): Observable<LoginResponse> {
-        return this._http.get<LoginResponse>('/api/auth/info')
+        return this._cache.cacheRequest(
+            'user_info',
+            this._http.get<LoginResponse>('/api/auth/info'),
+            {cacheTime: -1}
+        )
         .pipe(
             tap(info => this._storeUserInfo(info))
         );
@@ -114,7 +131,7 @@ export class AuthService {
     private _storeUserInfo(info: LoginResponse) {
         this._userInfo = info;
         try {
-            sessionStorage.setItem('_ui', new Buffer(JSON.stringify(info), 'utf8').toString('base64'));
+            this._store.setItem('_ui', new Buffer(JSON.stringify(info), 'utf8').toString('base64'), ['session', 'memory']);
         } catch (e) {
             console.error(e);
         }

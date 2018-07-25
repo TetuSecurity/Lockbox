@@ -1,6 +1,6 @@
 import {Component, Input, ViewChild, ElementRef, forwardRef} from '@angular/core';
+import {ControlValueAccessor, NG_VALUE_ACCESSOR, AbstractControl} from '@angular/forms';
 import {FormErrorParser} from '@core/';
-import {ControlValueAccessor, NG_VALUE_ACCESSOR} from '@angular/forms';
 
 export const INPUT_GROUP_VALUE_ACCESSOR : any = {
     provide: NG_VALUE_ACCESSOR,
@@ -19,9 +19,12 @@ export class InputGroupComponent implements ControlValueAccessor {
     @Input('type') type: string;
     @Input('label') label: string;
     @Input('name') name: string;
-    @Input('errors') errors?: {[key: string]: boolean};
+    @Input('formControl') control: AbstractControl;
     @Input('placeholder') placeholder?: string = '';
     @Input('autocomplete') autocomplete?: string = 'none';
+    @Input('maxLength') maxLength?: number = 999;
+    @Input('passwordButton') passwordButton?: boolean = false;
+    @Input('showRequirements') showRequirements: boolean = false;
 
     @ViewChild('input') set input(i: ElementRef) {
         this.inputElement = i.nativeElement as HTMLInputElement;
@@ -29,9 +32,21 @@ export class InputGroupComponent implements ControlValueAccessor {
     
     pristine: boolean = true;
     blurred: boolean = false;
+    focused: boolean = false;
     hasError: boolean = false;
     disabled: boolean = false;
+    pwdShown: boolean = false;
     inputElement: HTMLInputElement;
+
+    get hasPasswordError(): boolean {
+        const err =  this.control.errors;
+        return err && (err.passwordLength
+            || err.passwordUppercase
+            || err.passwordNumbers
+            || err.passwordLowercase
+            || err.passwordSymbols
+            || err.passwordComplexity);
+    }
     
     private _onChange: Function; 
     private _onTouch: Function; 
@@ -56,7 +71,7 @@ export class InputGroupComponent implements ControlValueAccessor {
         this.pristine = false;
         if (this._onChange) {
             this._onChange(this.inputElement.value);
-            this.hasError = this.errors && Object.keys(this.errors).length > 0;
+            this.hasError = this.control.errors && Object.keys(this.control.errors).length > 0;
         }
     }
 
@@ -70,11 +85,28 @@ export class InputGroupComponent implements ControlValueAccessor {
         if (!this.blurred) {
             this.blurred = true;
         }
+        this.focused = false;
+    }
+
+    onFocus() {
+        if (!this.focused) {
+            this.focused = true;
+        }
+        this.blurred = false;
     }
 
     getError(): string {
-        if (!!this.errors){
-            return FormErrorParser.parseErrors(this.label, this.errors);
+        if (!!this.control.errors){
+            return FormErrorParser.parseErrors(this.label, this.control.errors);
         }
+    }
+
+    togglePwdVis() {
+        if (this.pwdShown) {
+            this.type = 'password';
+        } else {
+            this.type = 'text';
+        }
+        this.pwdShown = !this.pwdShown;
     }
 }

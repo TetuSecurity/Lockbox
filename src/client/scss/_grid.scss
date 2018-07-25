@@ -85,7 +85,7 @@ $media-breakpoints: (
     display: none;
 }
 @mixin visible() {
-    display: block;
+    display: inherit;
 }
 
 // Top level

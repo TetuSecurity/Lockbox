@@ -12,7 +12,7 @@ gulp.task('compile-node', function(){
 	.pipe(gulp.dest('dist/server/'));
 });
 
-gulp.task('start-server', ['compile-node'], function(){
+gulp.task('_start-server', function(){
     if (server_proc) {
         server_proc.kill();
         server_proc = undefined;
@@ -22,6 +22,8 @@ gulp.task('start-server', ['compile-node'], function(){
         stdio: [0, 1, 2, 'ipc']
     });
 });
+
+gulp.task('start-server', gulp.series('compile-node', '_start-server'));
 
 gulp.task('webpack', function(done) {
     var config = webpackConfig;
@@ -44,7 +46,7 @@ gulp.task('webpack-watch', function() {
     config.watch = true;
     config.cache = true;
     config.bail = false;
-    config.devtool = 'eval';
+    config.devtool = 'inline-eval-cheap-source-map';
     config.module.rules.push(
         {
             enforce: 'pre',
@@ -72,10 +74,16 @@ gulp.task('webpack-watch', function() {
     });
 });
 
-gulp.task('watch', ['start-server', 'webpack-watch'], function(){
-  	console.log('watching for changes...');
-	gulp.watch(['src/server/**/*.ts'], ['start-server']);
+
+gulp.task('_watch', function(){
+    console.log('watching for changes...');
+    gulp.watch('src/server/**/*.ts', gulp.series('start-server'));
 });
 
+gulp.task(
+    'watch', 
+    gulp.parallel('start-server', '_watch', 'webpack-watch')
+);
+
 // Default Task
-gulp.task('default', ['compile-node', 'webpack']);
+gulp.task('default', gulp.parallel('compile-node', 'webpack'));

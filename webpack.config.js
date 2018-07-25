@@ -13,19 +13,19 @@ var AotPlugin = require('@ngtools/webpack').AngularCompilerPlugin;
 var commonsChunkPlugin = webpack.optimize.CommonsChunkPlugin;
 var NormalModuleReplacementPlugin = webpack.NormalModuleReplacementPlugin;
 
-var entrypoints = ['common', 'polyfills', 'vendor', 'app', 'styles'];
+var bundles = ['common', 'polyfills', 'vendor', 'app', 'styles'];
 
 var config = {
     entry: {
         'app': path.join(__dirname,'./src/client/main.ts'),
-        'polyfills': path.join(__dirname, './src/client/polyfills.ts'),
         'vendor': path.join(__dirname,'./src/client/vendor.ts'),
+        'polyfills': path.join(__dirname,'./src/client/polyfills.ts'),
         'styles': path.join(__dirname, './src/client/scss/styles.scss')
     },
-    devtool: 'source-map',
     output: {
-        filename: '[name].min.js',
-        path: path.join(__dirname, 'dist/client')
+        filename: '[name].[hash].min.js',
+        path: path.join(__dirname, 'dist/client'),
+        pathinfo: true
     },
     resolve: {
         extensions: ['.ts', '.js', '.json', '.scss', '.css']
@@ -58,14 +58,17 @@ var config = {
                     {
                         loader:'sass-loader',
                         options: {
-                            includePaths: [path.join(__dirname, './src/client/scss')]
+                          includePaths: [path.join(__dirname, './src/client/scss')]
                         }
                     }
                 ]
             },
             {
                 test: /\.scss$/,
-                include: [path.join(__dirname, './node_modules'), path.join(__dirname, './src/client/scss')],
+                include: [
+                    path.join(__dirname, './node_modules'), 
+                    path.join(__dirname, './src/client/scss')
+                ],
                 use: ExtractTextPlugin.extract({
                     fallback: 'style-loader',
                     use: [
@@ -95,30 +98,32 @@ var config = {
             },
             // fonts
             {
-                test: /\.((ttf)|(woff(2?))|(eot))/,
+                test: /\.((ttf)|(woff2?)|(eot))/i,
                 loader: 'url-loader',
                 exclude: [path.join(__dirname, './src/client/assets')],
                 options: {
                     limit: 10240, // 10K limit
-                    name: 'assets/fonts/[name].[ext]'
+                    name: 'fonts/[name].[ext]'
                 }
             },
             {
-                test: /\.svg/,
-                include: /font(s)?/i,
+                test: /font(s)?\.svg/,
                 exclude:  /\.svg\.js/,
                 use: [
                     {
                         loader: 'url-loader',
                         options: {
                             limit: 10*1024,
-                            name: 'assets/fonts/[name].svg'
+                            name: 'fonts/[name].svg'
                         }
+                    },
+                    {
+                        loader: 'svgo-loader'
                     }
                 ]
             },
-            // images
-            {
+             // images
+             {
                 test: /\.((jpg)|(png)|(gif)|(bmp)|(ico))/,
                 loader: 'url-loader',
                 exclude: [path.join(__dirname, './src/client/assets')],
@@ -137,14 +142,21 @@ var config = {
                             limit: 10*1024,
                             name: 'assets/images/[name].svg'
                         }
+                    },
+                    {
+                        loader: 'svgo-loader'
                     }
                 ]
             },
             // templateUrl
             { 
-                test: /\.html$/, 
-                loader: 'raw-loader'
-            },
+                test: /\.html$/,
+                use: [
+                    {
+                        loader: 'raw-loader'
+                    }
+                ]
+            }
         ]
     },
     plugins: [
@@ -152,10 +164,11 @@ var config = {
             filename: path.join(__dirname, './dist/client/index.html'),
             template: path.join(__dirname, './src/client/index.html'),
             inject: 'body',
-            hash: true,
+            hash: false,
+            showErrors: false,
             excludeAssets: [/styles\..*js/i],
             chunksSortMode: function(a,b) {
-                return entrypoints.indexOf(a.names[0]) - entrypoints.indexOf(b.names[0])
+                return bundles.indexOf(a.names[0]) - bundles.indexOf(b.names[0]);
             },
         }),
         new HtmlWebpackExcludeAssetsPlugin(),
@@ -166,7 +179,7 @@ var config = {
         }),
         new UglifyJsPlugin({
             parallel: true,
-            sourceMap: true,
+            sourceMap: process.env.BUILD_MODE === 'development',
             cache: true,
             uglifyOptions: {
                 output: {
@@ -176,11 +189,13 @@ var config = {
         }),
         new commonsChunkPlugin({
             name: 'common',
-            minChunks: 2
+            minChunks: 2,
+            async: false,
+            children: false
         }),
         new ExtractTextPlugin({
             allChunks: true, 
-            filename: 'styles.min.css'
+            filename: 'styles.[contenthash].min.css'
         }),
         new CircularDependencyPlugin({
             exclude: /node_modules/,
@@ -190,37 +205,26 @@ var config = {
             {
                 from: path.join(__dirname, './src/client/assets'),
                 to: path.join(__dirname, './dist/client/assets')
+            },
+            {
+                from: path.join(__dirname, './src/client/manifest.json'),
+                to: path.join(__dirname, './dist/client/manifest.json')
             }
         ]),
         new NormalModuleReplacementPlugin(/environments\/environment/, function(resource) {
             resource.request = resource.request.replace(/environment$/, (process.env.BUILD_MODE === 'development' ? 'devEnvironment':'prodEnvironment'));
         }),
-        new workbox.GenerateSW({
+        new workbox.InjectManifest({
+            swSrc: path.join(__dirname, './src/client/sw.js'),
             swDest: 'sw.js',
-            clientsClaim: true,
-            skipWaiting: true,
-            include: [/assets/, /.*\.((html)|(css)|(jpg)|(png)|(svg)|(woff(2?))|(eot)|(ttf))/, /((polyfills)|(common)|(vendor)|(app))\.min\.js/],
-            exclude: [/manifest/],
-            runtimeCaching: [{
-                // Match any same-origin request that contains 'api'.
-                urlPattern: /api/,
-                // Apply a network-first strategy.
-                handler: 'networkFirst',
-                options: {
-                  // Fall back to the cache after 10 seconds.
-                  networkTimeoutSeconds: 10,
-                  // Use a custom cache name for this route.
-                  cacheName: 'api-cache',
-                  // Configure custom cache expiration.
-                  expiration: {
-                    maxEntries: 10
-                  },
-                  // Configure which responses are considered cacheable.
-                  cacheableResponse: {
-                    statuses: [0, 200, 204]
-                  }
-                }
-            }]
+            importsDirectory: 'wb-assets',
+            exclude: [
+                /styles\..*\.min\.js/i, // empty bundle file from extractText
+                /[0-9]+\..*?\.min\.js$/i, // lazy-loaded bundles
+                /\.map/i, // source-maps
+                /node_modules/, // node_modules
+                /manifest/i // PWA manifest
+            ]
         })
     ]
 };

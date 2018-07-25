@@ -2,21 +2,36 @@
 $root-font-size: 10px; // 1rem = 10px;
 
 // Colors
-$main_color: #3fbae8;
-$error_color: #d9534f;
+$main-color: #0086e8;;
+$secondary-color: #3fbae8;
+$error-color: #d9534f;
 $success-color: #449d44;
+$almost-white: #EEE;
+$almost-black: #333;
+$text-grey: #3F3F3F;
+$text-light-grey: #c6c6c6;
+$disabled-text: #9f9f9f;
+$focus-background: #fff;
+$bg-color: #fff;
 
 // Scaffolding
 $base-border-radius: 0.5rem;
+$btn-border-radius: 1rem;
+$min-screen-size: 320px;
 
 // GRID VARS
 $num-columns: 12;
 
 $gutter: 1rem;
-$outer-gutter: 2rem;
+$outer-gutter: 0.5rem;
 $row-compensation: -0.5rem;
 $col-compensation: 0.5rem;
 
+/*
+* media queries use pixels because chrome doesn't 
+* let them respect html font-size for rem
+* which defeats the whole point.
+*/
 $screen-xs-min: 0;
 $screen-sm-min: 576px;
 $screen-md-min: 768px;

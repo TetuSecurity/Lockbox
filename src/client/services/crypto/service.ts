@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {from, Observable} from 'rxjs';
 import {map, tap} from 'rxjs/operators';
+import {BrowserStorageService} from '@services/caching';
 
 @Injectable({
     providedIn: 'root'
@@ -10,7 +11,9 @@ export class CryptoService {
     private _crypto;
     private _privKey: CryptoKey;
 
-    constructor() {
+    constructor(
+        private _store: BrowserStorageService
+    ) {
         try {
             this._cryptoHelpers = (window.crypto || window['mscrypto'])
             this._crypto = this._cryptoHelpers.subtle;
@@ -43,7 +46,7 @@ export class CryptoService {
         this._exportPrivateKey(key)
         .subscribe(keystring => {
             try {
-                sessionStorage.setItem('_pk', keystring);
+                this._store.setItem('_pk', keystring, ['session', 'memory']);
             } catch (e) {
                 console.error('could not save local pk securely');
             }
@@ -53,7 +56,7 @@ export class CryptoService {
     }
 
     loadPrivateKey() {
-        const saved_pk = sessionStorage.getItem('_pk');
+        const saved_pk = this._store.getItem('_pk', ['session', 'memory']);
         if (saved_pk) {
             this.importPrivateKey(this.encodeText(saved_pk, 'base64'))
             .subscribe(
@@ -69,7 +72,7 @@ export class CryptoService {
     cleanup() {
         this._privKey = undefined;
         try {
-            sessionStorage.delete('_pk');
+            this._store.removeItem('_pk', ['session', 'memory']);
         } catch (e) {
             console.log(e);
         }

@@ -9,7 +9,6 @@
                         type="email"
                         name="email"
                         [formControl]="formControls['email']"
-                        [errors]="formControls['email']?.errors"
                         label="Email"
                         placeholder="Email"
                         autocomplete="email"
@@ -19,7 +18,7 @@
                         type="password"
                         name="password"
                         [formControl]="formControls['password']"
-                        [errors]="formControls['password']?.errors"
+                        [passwordButton]="true"
                         label="New Password"
                         placeholder="New Password"
                         autocomplete="new-password"
@@ -29,13 +28,13 @@
                         type="password"
                         name="password"
                         [formControl]="formControls['confirmPassword']"
-                        [errors]="formControls['confirmPassword']?.errors"
+                        [passwordButton]="true"
                         label="Confirm Password"
                         placeholder="Confirm Password"
                         autocomplete="new-password"
                     ></input-group>
-                    <button class="btn btn-success d-inlineblock" type="submit">Sign up</button>
-                    <a [routerLink]="['/login']" class="d-inlineblock pull-right">Log in instead</a>
+                    <button class="btn btn-primary d-inlineblock" type="submit">Sign up</button>
+                    <a [routerLink]="['/login']" class="login-text">Log in instead</a>
                 </form>
             </div>
         </div>
