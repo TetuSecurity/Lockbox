@@ -1,12 +1,12 @@
 export interface UserSession {
     UserId: string;
     Email: string;
-    SessionKey: string;
+    SessionId: string;
     Expires: number;
 }
 
 export interface SessionInfo {
-    SessionKey: string;
+    SessionId: string;
     UserId: number;
     Expires: number;
     UserAgent?: string;

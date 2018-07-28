@@ -31,7 +31,7 @@ export class FilesystemService {
                     ...(this.decryptChildren(encDir.Children))
                 );
             }),
-            map(([id, ...children]: [string, ...INode[]]) => {
+            map(([id, ...children]) => {
                 const rootDir: Directory = {
                     IsDirectory: true,
                     Id: id,
@@ -68,7 +68,7 @@ export class FilesystemService {
                     ...(this.decryptChildren(encD.Children))
                 )
             }),
-            map(([nameBuf, cek, ...children]: [ArrayBuffer, CryptoKey, ...INode[]]) => {
+            map(([nameBuf, cek, ...children]) => {
                 const name = this._crypto.decodeText(nameBuf);
                 const d: Directory = {
                     IsDirectory: true,

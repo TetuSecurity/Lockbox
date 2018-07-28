@@ -2,7 +2,7 @@ import {NgModule} from '@angular/core';
 import {RouterModule} from '@angular/router';
 import {BrowserModule} from '@angular/platform-browser';
 import {SharedModule} from '@modules/shared';
-import {AppComponent, LoginComponent} from '@components/';
+import {AppComponent} from '@components/';
 import {IsLoggedInGuard, NotLoggedInGuard} from '@guards/'
 
 @NgModule({
@@ -14,15 +14,15 @@ import {IsLoggedInGuard, NotLoggedInGuard} from '@guards/'
         SharedModule,
         RouterModule.forRoot(
             [
-                {path: 'login', canActivate: [NotLoggedInGuard], component: LoginComponent},
-                {path: 'signup', canLoad: [NotLoggedInGuard], canActivateChild: [NotLoggedInGuard], loadChildren: './routes/+signup#SignupLazyModule'},
-                {path: '', canLoad: [IsLoggedInGuard], canActivateChild: [IsLoggedInGuard], loadChildren: './routes/+mail#MailLazyModule'},
+                {path: 'login', loadChildren: './routes/+login/module#LazyLoginModule'},
+                {path: 'signup', loadChildren: './routes/+signup/module#LazySignupModule'},
+                {path: 'files', loadChildren: './routes/+files/module#LazyFilesModule'},
+                {path: '', loadChildren: './routes/+mail/module#LazyMailModule'},
             ]
         )
     ],
     declarations: [
-        AppComponent,
-        LoginComponent
+        AppComponent
     ]
 })
 export class AppModule {}

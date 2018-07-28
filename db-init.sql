@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 CREATE TABLE IF NOT EXISTS `sessions` (
   `RowId` int(11) NOT NULL AUTO_INCREMENT,
-  `SessionKey` varchar(32) NOT NULL,
+  `SessionId` varchar(32) NOT NULL,
   `UserId` varchar(45) NOT NULL,
   `Expires` bigint(20) NOT NULL,
   `Active` tinyint(1) NOT NULL DEFAULT '1',
@@ -28,14 +28,16 @@ CREATE TABLE IF NOT EXISTS `sessions` (
   `LastUsed` bigint(20) NOT NULL,
   `UserAgent` text,
   PRIMARY KEY (`RowId`),
-  UNIQUE KEY `SessionKey_UNIQUE` (`SessionKey`),
+  UNIQUE KEY `SessionId_UNIQUE` (`SessionId`),
   KEY `user_idx` (`UserId`),
   CONSTRAINT `user` FOREIGN KEY (`UserId`) REFERENCES `users` (`UserId`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `files` (
+CREATE TABLE IF NOT EXISTS `inodes` (
   `RowId` int(11) NOT NULL AUTO_INCREMENT,
-  `Id` varchar(45) NOT NULL,
+  `INodeId` varchar(45) NOT NULL,
+  `FileId` varchar(45) DEFAULT NULL,
+  `EncryptedMetadata` longtext,
   `EncryptedName` text NOT NULL,
   `IV` text,
   `IsDirectory` tinyint(1) NOT NULL DEFAULT '0',
@@ -43,17 +45,22 @@ CREATE TABLE IF NOT EXISTS `files` (
   `LastModifiedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `CreatedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`RowId`),
-  UNIQUE KEY `Id_UNIQUE` (`Id`),
+  UNIQUE KEY `Id_UNIQUE` (`INodeId`),
   KEY `parent_idx` (`ParentId`),
-  CONSTRAINT `parent` FOREIGN KEY (`ParentId`) REFERENCES `files` (`Id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  CONSTRAINT `parent` FOREIGN KEY (`ParentId`) REFERENCES `inodes` (`INodeId`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 CREATE TABLE IF NOT EXISTS `user_access` (
   `RowId` int(11) NOT NULL AUTO_INCREMENT,
   `UserId` varchar(45) NOT NULL,
-  `FileId` varchar(45) NOT NULL,
+  `INodeId` varchar(45) NOT NULL,
   `EncryptedKey` text NOT NULL,
   `Active` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`RowId`)
+  PRIMARY KEY (`RowId`),
+  KEY `inode_idx` (`INodeId`),
+  CONSTRAINT `inode` FOREIGN KEY (`INodeId`) REFERENCES `inodes` (`INodeId`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='A table to map users to their files with the included Key';
+
+
 

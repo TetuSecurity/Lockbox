@@ -28,11 +28,10 @@ export interface FileMetadata {
 export interface EncryptedINode { // represents the payload to/from API
     INodeId: string; // uuid
     EncryptedName: string; // encrypted inode name
-    ParentId: string; // uuid, needed for db
+    ParentId?: string; // uuid, needed for db
     EncryptedKey: string
     IV: string; // IV used in AES decryption
     IsDirectory: boolean;
-    // Audience: UserAccess[]; // list of users allowed to access
 }
 
 export interface EncryptedDirectory extends EncryptedINode {

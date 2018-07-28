@@ -21,4 +21,4 @@ import {IsLoggedInGuard} from '@guards/loggedin';
         ViewMessageComponent,
     ]
 })
-export class MailLazyModule {}
+export class LazyMailModule {}

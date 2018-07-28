@@ -19,8 +19,8 @@ module.exports = (APP_CONFIG: Config) => {
         sessionManager.getUserSession(authZ)
         .pipe(
             tap(result => {
-                if (result && result.SessionKey) {
-                    sessionManager.updateAccess(result.SessionKey).subscribe(_ => _, err=> console.error(err));
+                if (result && result.SessionId) {
+                    sessionManager.updateAccess(result.SessionId).subscribe(_ => _, err=> console.error(err));
                 }
             })
         )

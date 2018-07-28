@@ -2,6 +2,23 @@ workbox.skipWaiting();
 workbox.clientsClaim();
 
 workbox.routing.registerRoute(
+    /index\.html/i, 
+    workbox.strategies.networkFirst({ 
+        networkTimeoutSeconds: 3, 
+        cacheName: 'index-cache',
+        plugins: [
+            new workbox.cacheableResponse.Plugin({
+                statuses: [200]
+            }),
+            new workbox.expiration.Plugin({
+                maxEntries: 1
+            })
+        ]
+    }), 
+    'GET'
+);
+
+workbox.routing.registerRoute(
     /\/api\/.+/i, 
     workbox.strategies.networkFirst({ 
         networkTimeoutSeconds: 5, 

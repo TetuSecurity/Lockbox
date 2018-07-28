@@ -36,7 +36,7 @@ module.exports = (APP_CONFIG: Config) => {
             )
             .subscribe(
                 result => {
-                    res.cookie(APP_CONFIG.cookie_name, result.SessionKey, {...COOKIE_OPTIONS, secure: req.secure});
+                    res.cookie(APP_CONFIG.cookie_name, result.SessionId, {...COOKIE_OPTIONS, secure: req.secure});
                     return res.send();
                 },
                 err => {
@@ -73,7 +73,7 @@ module.exports = (APP_CONFIG: Config) => {
             )       
         ).subscribe(
             ([session, userData]) => {
-                res.cookie(APP_CONFIG.cookie_name, session.SessionKey, {...COOKIE_OPTIONS, secure: req.secure});
+                res.cookie(APP_CONFIG.cookie_name, session.SessionId, {...COOKIE_OPTIONS, secure: req.secure});
                 return res.send(userData);
             },
             err => {
@@ -109,14 +109,14 @@ module.exports = (APP_CONFIG: Config) => {
         )
     });
 
-    router.delete('/sessions/:sessionKey', (req, res) => {
-        const sessionKey = req.params['sessionKey'];
-        if (res.locals.usersession && res.locals.usersession.UserId && res.locals.usersession.SessionKey) {
-            sessionManager.deactivateSession(res.locals.usersession.UserId, sessionKey)
+    router.delete('/sessions/:SessionId', (req, res) => {
+        const SessionId = req.params['SessionId'];
+        if (res.locals.usersession && res.locals.usersession.UserId && res.locals.usersession.SessionId) {
+            sessionManager.deactivateSession(res.locals.usersession.UserId, SessionId)
             .subscribe(
                 success => {
                     if (success) {
-                        if (res.locals.usersession.SessionKey === sessionKey) {
+                        if (res.locals.usersession.SessionId === SessionId) {
                             res.clearCookie(APP_CONFIG.cookie_name, {...COOKIE_OPTIONS, secure: req.secure});
                         }
                         return res.send(success);
@@ -129,9 +129,9 @@ module.exports = (APP_CONFIG: Config) => {
     });
 
     router.post('/logout', (req, res) => {
-        if (res.locals.usersession && res.locals.usersession.SessionKey && res.locals.usersession.UserId) {
+        if (res.locals.usersession && res.locals.usersession.SessionId && res.locals.usersession.UserId) {
             res.clearCookie(APP_CONFIG.cookie_name, {...COOKIE_OPTIONS, secure: req.secure});
-            sessionManager.deactivateSession(res.locals.usersession.UserId, res.locals.usersession.SessionKey)
+            sessionManager.deactivateSession(res.locals.usersession.UserId, res.locals.usersession.SessionId)
             .subscribe(
                 _ => res.send(true),
                 err => {
