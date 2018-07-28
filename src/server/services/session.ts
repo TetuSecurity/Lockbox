@@ -9,7 +9,7 @@ const EXPIRATION_SECONDS = (12 * 60 * 60); // 12 hour expiration for now
 export class SessionManager {
     constructor (private _db: DatabaseService) {}
 
-    getActiveSessions(userId: number): Observable<SessionInfo[]> {
+    getActiveSessions(userId: string): Observable<SessionInfo[]> {
         return this._db.query('Select * from `sessions` where `UserId`=? AND `Active`=1', [userId])
         .pipe(
             map(sessions => {
@@ -32,7 +32,7 @@ export class SessionManager {
         );
     }
 
-    createSession(userId: number, userAgent?: string): Observable<{SessionKey: string, Expires: number}> {
+    createSession(userId: string, userAgent?: string): Observable<{SessionKey: string, Expires: number}> {
         const sessionId = uuid().replace(/\-/ig, '');
         const now = Math.floor(new Date().valueOf()/1000);
         const expires = now + EXPIRATION_SECONDS; // 30 day expiration for now
@@ -43,7 +43,7 @@ export class SessionManager {
         );
     }
 
-    deactivateSession(userId: number, sessionKey: string): Observable<any> {
+    deactivateSession(userId: string, sessionKey: string): Observable<any> {
         return this._db.query('Update `sessions` set `Active`=0 where `SessionKey`=? AND `UserId`=?', [sessionKey, userId])
         .pipe(
             map(results => results.changedRows > 0)

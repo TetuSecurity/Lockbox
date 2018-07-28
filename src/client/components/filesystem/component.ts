@@ -11,6 +11,7 @@ export class FilesystemComponent extends SubscriberComponent implements OnInit {
 
     isLoading: boolean;
     breadCrumb: string = '/';
+    
     currentDir: Directory; // currently viewing a directory full of inodes
 
     constructor() {

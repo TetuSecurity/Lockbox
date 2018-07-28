@@ -15,6 +15,7 @@ import {Config} from './models/config';
 import {DatabaseService} from './services/db';
 import {SessionManager} from './services/session';
 import {LoggingService} from './services/logger';
+import {FileService} from './services/files';
 
 dotenv.config({silent: true});
 
@@ -57,7 +58,7 @@ function changeContentType(res, path, stat) {
 }
 
 if (cluster.isMaster) {
-    const numCPUs = os.cpus().length;
+    const numCPUs = Math.max(2, os.cpus().length); // minimum 1 worker
     const workers: cluster.Worker[] = [];
     console.log('[ master ]: App starting on port', APP_CONFIG.port);
     console.log(`[ master ]: Spinning up ${numCPUs - 1} workers`);
@@ -99,6 +100,8 @@ if (cluster.isMaster) {
     const sessionManager = new SessionManager(db);
     APP_CONFIG.sessionManager = sessionManager;
 
+    const fileService = new FileService(db);
+    APP_CONFIG.fileService = fileService;
 
     const app = express();
     app.use(compress());

@@ -25,7 +25,7 @@ export class CryptoService {
     }
 
     // global
-    isSupported() {
+    isSupported(): boolean {
         return !!this._crypto;
     }
 
@@ -41,7 +41,7 @@ export class CryptoService {
         return Buffer.from(buf).toString(target_encoding || 'base64');
     }
 
-    storePrivateKey(key: CryptoKey) {
+    storePrivateKey(key: CryptoKey): void {
         this._privKey = key;
         this._exportPrivateKey(key)
         .subscribe(keystring => {
@@ -55,7 +55,7 @@ export class CryptoService {
         });
     }
 
-    loadPrivateKey() {
+    loadPrivateKey(): void {
         const saved_pk = this._store.getItem('_pk', ['session', 'memory']);
         if (saved_pk) {
             this.importPrivateKey(this.encodeText(saved_pk, 'base64'))
@@ -69,7 +69,7 @@ export class CryptoService {
     }
 
     // run on logout to make sure no stored keys are left
-    cleanup() {
+    cleanup(): void {
         this._privKey = undefined;
         try {
             this._store.removeItem('_pk', ['session', 'memory']);

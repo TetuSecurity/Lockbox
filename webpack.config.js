@@ -23,7 +23,7 @@ var config = {
         'styles': path.join(__dirname, './src/client/scss/styles.scss')
     },
     output: {
-        filename: '[name].[hash].min.js',
+        filename: '[name].min.js',
         path: path.join(__dirname, 'dist/client'),
         pathinfo: true
     },
@@ -195,7 +195,7 @@ var config = {
         }),
         new ExtractTextPlugin({
             allChunks: true, 
-            filename: 'styles.[contenthash].min.css'
+            filename: 'styles.min.css'
         }),
         new CircularDependencyPlugin({
             exclude: /node_modules/,

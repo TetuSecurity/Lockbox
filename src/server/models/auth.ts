@@ -1,5 +1,5 @@
 export interface UserSession {
-    UserId: number;
+    UserId: string;
     Email: string;
     SessionKey: string;
     Expires: number;

@@ -4,6 +4,7 @@ import * as uuid from 'uuid/v4';
 import {Observable, from, forkJoin, of as ObservableOf, throwError} from 'rxjs';
 import {flatMap, map} from 'rxjs/operators';
 import {Config} from '../models/config';
+import {FileService} from '../services/files';
 
 const COOKIE_OPTIONS = {
     path: '/',
@@ -17,6 +18,7 @@ module.exports = (APP_CONFIG: Config) => {
     const router = Router();
     const db = APP_CONFIG.db;
     const sessionManager = APP_CONFIG.sessionManager;
+    const fileService = APP_CONFIG.fileService;
 
     router.post('/signup', (req, res) => {
         const body = req.body;
@@ -25,10 +27,12 @@ module.exports = (APP_CONFIG: Config) => {
         } else {
             const passSalt = uuid();
             const passHash = createHash('sha512').update(`${body.Password}|${passSalt}`).digest('base64');
-            const q = 'Insert into `users` (`Email`, `Salt`, `IV`, `PrivateKey`, `PublicKey`, `Password`, `Active`) VALUES(?, ?, ?, ?, ?, ?, 1);'
-            db.query(q, [body.Email, body.Salt, body.IV, body.PrivateKey, body.PublicKey, `${passHash}|${passSalt}`])
+            const userId = uuid();
+            const q = 'Insert into `users` (`UserId`,`Email`, `Salt`, `IV`, `PrivateKey`, `PublicKey`, `Password`, `Active`) VALUES(?, ?, ?, ?, ?, ?, ?, 1);'
+            db.query(q, [userId, body.Email, body.Salt, body.IV, body.PrivateKey, body.PublicKey, `${passHash}|${passSalt}`])
             .pipe(
-                flatMap(result => sessionManager.createSession(result.insertId, JSON.stringify(res.useragent)))
+                flatMap(_ => fileService.createRootDir(userId)),
+                flatMap(_ => sessionManager.createSession(userId, JSON.stringify(res.useragent)))
             )
             .subscribe(
                 result => {
@@ -52,7 +56,7 @@ module.exports = (APP_CONFIG: Config) => {
         .pipe(
             flatMap(
                 (users: any[]) => {
-                    let user = {UserId: -100, Password: '12345|12345', Salt: '1', IV: '1', PrivateKey: '1'}; // use a fake user which will fail to avoid timing differences indicating existence of real users.
+                    let user = {UserId: 'notarealuser', Password: '12345|12345', Salt: '1', IV: '1', PrivateKey: '1'}; // use a fake user which will fail to avoid timing differences indicating existence of real users.
                     if (users.length > 0) {
                             user = users[0]
                     }
