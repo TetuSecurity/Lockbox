@@ -52,11 +52,11 @@ module.exports = (APP_CONFIG: Config) => {
         if (!body || !body.Email || !body.Password) {
             return res.status(400).send('Email and Password are required fields');
         }
-        db.query('Select `Password`, `PrivateKey`, `UserId`, `Salt`, `IV` from `users` where `Active`=1 AND `Email`=? LIMIT 1;', [body.Email])
+        db.query('Select `Password`, `PublicKey`, `PrivateKey`, `UserId`, `Salt`, `IV` from `users` where `Active`=1 AND `Email`=? LIMIT 1;', [body.Email])
         .pipe(
             flatMap(
                 (users: any[]) => {
-                    let user = {UserId: 'notarealuser', Password: '12345|12345', Salt: '1', IV: '1', PrivateKey: '1'}; // use a fake user which will fail to avoid timing differences indicating existence of real users.
+                    let user = {UserId: 'notarealuser', Password: '12345|12345', Salt: '1', IV: '1', PrivateKey: '1', PublicKey: '1'}; // use a fake user which will fail to avoid timing differences indicating existence of real users.
                     if (users.length > 0) {
                             user = users[0]
                     }
@@ -67,7 +67,7 @@ module.exports = (APP_CONFIG: Config) => {
                     }
                     return forkJoin(
                         sessionManager.createSession(user.UserId, JSON.stringify(res.useragent)),
-                        ObservableOf({Email: body.Email, PrivateKey: user.PrivateKey, Salt: user.Salt, IV: user.IV})
+                        ObservableOf({Email: body.Email, PublicKey: user.PublicKey, PrivateKey: user.PrivateKey, Salt: user.Salt, IV: user.IV})
                     );
                 }
             )       

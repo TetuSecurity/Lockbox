@@ -1,0 +1,48 @@
+<div class="container">
+    <div class="row header-row">
+        <div class="col-xs-4 header-container">
+            {{currentDir?.Name || '/'}}
+        </div>
+        <div class="col-xs-8 create-form">
+            <button class="btn btn-success" (click)="createDir('Test')">
+                Create "Test" dir
+            </button>
+            <input type="file" (change)="createFile($event)">
+        </div>
+    </div>
+    <div class="row body-row">
+        <div class="col-md-3 hidden-xs hidden-sm sidebar-container">
+            Eventually, Controls will go here
+        </div>
+        <div class="col-xs-12 col-md-9 files-container">
+            <table class="files-table">
+                <thead>
+                    <th>Icon</th>
+                    <th>Name</th>
+                    <th>Last Modified</th>
+                </thead>
+                <tbody>
+                    <tr *ngIf="currentDir?.ParentId">
+                        <td>
+                            ..
+                        </td>
+                        <td colspan="2">
+                            Parent Directory
+                        </td>
+                    </tr>
+                    <tr *ngFor="let node of currentDir?.Children">
+                        <td>
+                            &nbsp;
+                        </td>
+                        <td [attr.colspan]="node?.IsDirectory ? 2 : 1">
+                            {{node?.Name}}
+                        </td>
+                        <td *ngIf="!node?.IsDirectory">
+                            {{node?.LastModifiedDate}}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

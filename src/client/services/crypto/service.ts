@@ -10,6 +10,7 @@ export class CryptoService {
     private _cryptoHelpers;
     private _crypto;
     private _privKey: CryptoKey;
+    private _pubKey: CryptoKey;
 
     constructor(
         private _store: BrowserStorageService
@@ -18,6 +19,7 @@ export class CryptoService {
             this._cryptoHelpers = (window.crypto || window['mscrypto'])
             this._crypto = this._cryptoHelpers.subtle;
             this.loadPrivateKey();
+            this.loadPublicKey();
         } catch(err) {
             alert('Your browser does not support the WebCryptoAPI. Please switch to a different browser');
             console.error('Your browser does not support the WebCryptoAPI', err);
@@ -55,6 +57,20 @@ export class CryptoService {
         });
     }
 
+    storePublicKey(key: CryptoKey): void {
+        this._pubKey = key;
+        this.exportPublicKey(key)
+        .subscribe(keystring => {
+            try {
+                this._store.setItem('_pubk', keystring, ['session', 'memory']);
+            } catch (e) {
+                console.error('could not save local pubk securely');
+            }
+        }, err => {
+            console.error(err);
+        });
+    }
+
     loadPrivateKey(): void {
         const saved_pk = this._store.getItem('_pk', ['session', 'memory']);
         if (saved_pk) {
@@ -68,11 +84,26 @@ export class CryptoService {
         }
     }
 
+    loadPublicKey(): void {
+        const saved_pubk = this._store.getItem('_pubk', ['session', 'memory']);
+        if (saved_pubk) {
+            this.importPublicKey(this.encodeText(saved_pubk, 'base64'))
+            .subscribe(
+                key => this._pubKey = key,
+                err => {
+                    throw(err);
+                }
+            );
+        }
+    }
+
     // run on logout to make sure no stored keys are left
     cleanup(): void {
         this._privKey = undefined;
+        this._pubKey = undefined;
         try {
             this._store.removeItem('_pk', ['session', 'memory']);
+            this._store.removeItem('_pubk', ['session', 'memory']);
         } catch (e) {
             console.log(e);
         }
@@ -218,12 +249,12 @@ export class CryptoService {
         );
     }
 
-    wrapCEK(key: CryptoKey, wrapper: CryptoKey): Observable<ArrayBuffer> {
+    wrapCEK(key: CryptoKey, wrapper?: CryptoKey): Observable<ArrayBuffer> {
         return from<ArrayBuffer>(
             this._crypto.wrapKey(
                 'raw',
                 key,
-                wrapper,
+                wrapper || this._pubKey,
                 {
                     name: 'RSA-OAEP',
                     hash: {name: 'SHA-512'},

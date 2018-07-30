@@ -16,13 +16,9 @@ export interface File extends INode {
     IsDirectory: false;
     Contents?: any; // file contents available after decryption
     FileId?: string; // uuid for fetching encrypted file
-    Metadata: FileMetadata; // information about filetype
-}
-
-export interface FileMetadata {
     MimeType: string;
-    LastModifiedDate: string;
-    CreatedDate: string;
+    LastModifiedDate?: string;
+    CreatedDate?: string;
 }
 
 export interface EncryptedINode { // represents the payload to/from API
@@ -41,7 +37,9 @@ export interface EncryptedDirectory extends EncryptedINode {
 
 export interface EncryptedFile extends EncryptedINode {
     FileId: string; // uuid needed to get file contents from API
-    EncryptedMetadata: string; // string representation of FileMetadata
+    MimeType: string;
+    LastModifiedDate?: string;
+    CreatedDate?: string;
     IsDirectory: false;
 }
 

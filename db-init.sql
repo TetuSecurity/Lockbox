@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `inodes` (
   `RowId` int(11) NOT NULL AUTO_INCREMENT,
   `INodeId` varchar(45) NOT NULL,
   `FileId` varchar(45) DEFAULT NULL,
-  `EncryptedMetadata` longtext,
+  `MimeType` varchar(45) DEFAULT NULL,
   `EncryptedName` text NOT NULL,
   `IV` text,
   `IsDirectory` tinyint(1) NOT NULL DEFAULT '0',
@@ -46,8 +46,19 @@ CREATE TABLE IF NOT EXISTS `inodes` (
   `CreatedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`RowId`),
   UNIQUE KEY `Id_UNIQUE` (`INodeId`),
+  UNIQUE KEY `FileId_UNIQUE` (`FileId`),
   KEY `parent_idx` (`ParentId`),
   CONSTRAINT `parent` FOREIGN KEY (`ParentId`) REFERENCES `inodes` (`INodeId`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS `file_locations` (
+  `RowId` int(11) NOT NULL AUTO_INCREMENT,
+  `FileId` varchar(45) NOT NULL,
+  `Location` text NOT NULL,
+  PRIMARY KEY (`RowId`),
+  UNIQUE KEY `FileId_UNIQUE` (`FileId`),
+  CONSTRAINT `file_location` FOREIGN KEY (`FileId`) REFERENCES `inodes` (`FileId`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 

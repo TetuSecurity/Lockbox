@@ -22,7 +22,7 @@ export class AuthService {
         try {
             const ui = this._store.getItem('_ui', ['session', 'memory']);
             if (ui) {
-                this._userInfo = JSON.parse(new Buffer(ui, 'base64').toString('base64'));
+                this._userInfo = JSON.parse(new Buffer(ui, 'base64').toString('utf8'));
             }
         } catch (e) {
             console.error(e);
@@ -47,13 +47,21 @@ export class AuthService {
                 )
             ),
             flatMap(([response, passKey]) => 
-                this._crypto.unwrapPrivateKey(
-                    passKey, 
-                    this._crypto.encodeText(response.PrivateKey, 'base64'), 
-                    this._crypto.encodeText(response.IV, 'base64')
+                forkJoin(
+                    this._crypto.unwrapPrivateKey(
+                        passKey, 
+                        this._crypto.encodeText(response.PrivateKey, 'base64'), 
+                        this._crypto.encodeText(response.IV, 'base64')
+                    ),
+                    this._crypto.importPublicKey(
+                        this._crypto.encodeText(response.PublicKey, 'base64')
+                    )
                 )
             ),
-            tap(privKey => this._crypto.storePrivateKey(privKey)),
+            tap(([privKey, pubKey]) => {
+                this._crypto.storePrivateKey(privKey);
+                this._crypto.storePublicKey(pubKey);
+            }),
             map(_ => true) // dont return the private key, just an indicator of success
         );
     }
@@ -68,7 +76,10 @@ export class AuthService {
             ),
             this._crypto.generateKeypair()
         ).pipe(
-            tap(([wrapper, keypair]) => this._crypto.storePrivateKey(keypair.privateKey)),
+            tap(([wrapper, keypair]) => {
+                this._crypto.storePrivateKey(keypair.privateKey);
+                this._crypto.storePublicKey(keypair.publicKey);
+            }),
             flatMap(([wrapper, keypair]) => forkJoin(
                 this._crypto.exportPublicKey(keypair.publicKey),
                 this._crypto.wrapPrivateKey(wrapper, keypair.privateKey, iv),
