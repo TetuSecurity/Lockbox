@@ -22,7 +22,7 @@
                     <th>Last Modified</th>
                 </thead>
                 <tbody>
-                    <tr *ngIf="currentDir?.ParentId">
+                    <tr *ngIf="currentDir?.ParentId" [routerLink]="['/files', currentDir?.ParentId]">
                         <td>
                             ..
                         </td>
@@ -30,7 +30,7 @@
                             Parent Directory
                         </td>
                     </tr>
-                    <tr *ngFor="let node of currentDir?.Children">
+                    <tr *ngFor="let node of currentDir?.Children" (click)="routeOrDownload(node)">
                         <td>
                             &nbsp;
                         </td>

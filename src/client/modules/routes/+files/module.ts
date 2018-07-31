@@ -10,6 +10,7 @@ import {FilesystemComponent} from '@components/filesystem/component';
         RouterModule.forChild(
             [
                 {path: '', pathMatch: 'full', canActivate: [IsLoggedInGuard], component: FilesystemComponent},
+                {path: ':id', canActivate: [IsLoggedInGuard], component: FilesystemComponent},
             ]
         )
     ],

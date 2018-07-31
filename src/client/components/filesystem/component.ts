@@ -1,7 +1,8 @@
 import {Component, OnInit} from '@angular/core';
 import {SubscriberComponent} from '@core/';
-import {INode, Directory} from '@models/inode';
+import {INode, Directory, File} from '@models/inode';
 import {FilesystemService} from '@services/filesystem/service';
+import {ActivatedRoute, Router} from '@angular/router';
 
 @Component({
     selector: 'filesystem-root',
@@ -16,19 +17,32 @@ export class FilesystemComponent extends SubscriberComponent implements OnInit {
     currentDir: Directory; // currently viewing a directory full of inodes
 
     constructor(
-        private _filesService: FilesystemService
+        private _filesService: FilesystemService,
+        private _route: ActivatedRoute,
+        private _router: Router
     ) {
         super();
     }
 
     ngOnInit(): void {
-        this.addSubscription(
-            this._filesService.getRootDirectory()
-            .subscribe(
-                root => this.currentDir = root,
-                err => console.error(err)
-            )
-        );
+        const id = this._route.snapshot.paramMap.get('id');
+        if (id) {
+            this.addSubscription(
+                this._filesService.getDirectory(id)
+                .subscribe(
+                    dir => this.currentDir = dir,
+                    err => console.error(err)
+                )
+            );
+        } else {
+            this.addSubscription(
+                this._filesService.getRootDirectory()
+                .subscribe(
+                    root => this.currentDir = root,
+                    err => console.error(err)
+                )
+            );
+        }
     }
 
     createDir(name: string) {
@@ -57,5 +71,17 @@ export class FilesystemComponent extends SubscriberComponent implements OnInit {
                 )
             );
         }
+    }
+
+    routeOrDownload(node: INode) {
+        if (node.IsDirectory) {
+            this._router.navigate(['/files', node.INodeId]);
+        } else {
+            this.downloadFile((node as File).FileId);
+        }
+    }
+
+    downloadFile(fileId: string) {
+        console.log('You download it...');
     }
 }

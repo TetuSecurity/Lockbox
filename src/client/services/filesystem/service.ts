@@ -157,7 +157,7 @@ export class FilesystemService {
                 )
             }),
             map(([nameBuf, cek, ...children]) => {
-                const name = this._crypto.decodeText(nameBuf);
+                const name = this._crypto.decodeText(nameBuf, 'utf8');
                 const d: Directory = {
                     IsDirectory: true,
                     INodeId: encD.INodeId,
@@ -218,7 +218,7 @@ export class FilesystemService {
                 )
             }),
             map(([nameBuf, mimeType, cek]: [ArrayBuffer, string, CryptoKey]) => {
-                const name = this._crypto.decodeText(nameBuf);
+                const name = this._crypto.decodeText(nameBuf, 'utf8');
                 const f: File = {
                     IsDirectory: false,
                     INodeId: encF.INodeId,
