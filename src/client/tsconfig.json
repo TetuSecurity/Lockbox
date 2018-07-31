@@ -21,6 +21,7 @@
             "@models/*": ["models/*", "models/index"],
             "@modules/*": ["modules/*", "modules/index"],
             "@services/*": ["services/*", "services/index"],
+            "@resolvers/*": ["resolvers/*", "resolvers/index"],
             "@environments/*": ["environments/*", "environments/environment"]
         }
     },

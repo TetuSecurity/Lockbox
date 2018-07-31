@@ -27,6 +27,7 @@ module.exports = (APP_CONFIG: Config) => {
         if (!userId) {
             return res.status(401).send('Not Authorized to get files');
         }
+        console.log(userId, req.params.inodeid);
         fileService.getDirectory(userId, req.params.inodeid)
         .subscribe(
             dir => {

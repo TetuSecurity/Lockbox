@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `user_access` (
   `RowId` int(11) NOT NULL AUTO_INCREMENT,
   `UserId` varchar(45) NOT NULL,
   `INodeId` varchar(45) NOT NULL,
-  `EncryptedKey` text NOT NULL,
+  `EncryptedKey` text NULL,
   `Active` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`RowId`),
   KEY `inode_idx` (`INodeId`),

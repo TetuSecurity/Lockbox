@@ -1,5 +1,5 @@
 import {Observable} from 'rxjs';
-import {createPool, IPoolConfig, Pool, escape as mysqlEscape} from 'mysql';
+import {createPool, IPoolConfig, Pool, escape as mysqlEscape, Connection} from 'mysql';
 
 const NUMPERPAGE = 50;
 
@@ -19,7 +19,7 @@ export class DatabaseService {
         this._pool = createPool(poolconfig);
     }
 
-    query(q, params?): Observable<any> {
+    query(q: string, params?: any): Observable<any> {
         return Observable.create(observer => {
             this._pool.getConnection((err, conn) => {
                 if (err) {
@@ -36,6 +36,57 @@ export class DatabaseService {
                     observer.next(result);
                     observer.complete(result); // rebroadcast on complete for async await
                 });
+            });
+        });
+    }
+
+    queryConnection(conn: Connection, q:string, params?:any) {
+        return Observable.create(observer => {
+            conn.query(q, params || [], (error, result) => {
+                conn.release();
+                if (error) {
+                    return observer.error(error);
+                }
+                observer.next(result);
+                observer.complete(result); // rebroadcast on complete for async await
+            });
+        });
+    }
+
+    commitConnection(conn: Connection): Observable<void> {
+        return Observable.create(observer => {
+            conn.commit(error => {
+                if (error) {
+                    return conn.rollback(() => {
+                        observer.error(error);
+                    });
+                }
+                observer.next(null);
+                observer.complete();
+            });
+        });
+    }
+
+    rollbackConnection(conn: Connection): Observable<void> {
+        return Observable.create(observer => {
+            conn.rollback(() => {
+                observer.next(null);
+                observer.complete();
+            });
+        });
+    }
+
+    getConnection(): Observable<Connection> {
+        return Observable.create(observer => {
+            this._pool.getConnection((err, conn) => {
+                if (err) {
+                    if (conn && conn.release) {
+                        conn.release();
+                    }
+                    return observer.error(err);
+                }
+            observer.next(conn);
+            observer.complete(conn); // rebroadcast on complete for async await
             });
         });
     }

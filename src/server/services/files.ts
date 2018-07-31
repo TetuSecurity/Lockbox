@@ -1,5 +1,5 @@
-import {Observable, forkJoin, of} from 'rxjs';
-import {map, switchMap} from 'rxjs/operators';
+import {Observable, forkJoin, of, throwError} from 'rxjs';
+import {map, switchMap, finalize} from 'rxjs/operators';
 import * as uuid from 'uuid/v4';
 import {DatabaseService} from './db';
 import {EncryptedDirectory, EncryptedFile} from '../models/inode';
@@ -9,7 +9,22 @@ export class FileService {
     constructor (private _db: DatabaseService) {}
 
     createRootDir(userId: string): Observable<void> {
-        return this._db.query('Insert into `inodes` (`INodeId`, `EncryptedName`, `IsDirectory`) VALUES(?, ?, 1);', [userId, '/']);
+        return this._db.getConnection().pipe(
+            switchMap(conn => {
+                const rootNodeq = 'Insert into `inodes` (`INodeId`, `EncryptedName`, `IsDirectory`) VALUES(?, ?, 1);';
+                return this._db.queryConnection(conn, rootNodeq, [userId, '/'])
+                .pipe(
+                    switchMap(_ => {
+                        const uaq = 'Insert into `user_access` (`UserId`, `INodeId`) VALUES (?, ?);';
+                        return this._db.queryConnection(conn, uaq, [userId, userId])
+                    }),
+                    switchMap(
+                        _ => this._db.commitConnection(conn),
+                        err=> this._db.rollbackConnection(conn).pipe(switchMap(_ => throwError(err)))
+                    )
+                );
+            }),
+        );
     }
 
     getRoot(userId: string): Observable<EncryptedDirectory> {
@@ -37,8 +52,8 @@ export class FileService {
 
     getDirectory(userId: string, dirId: string): Observable<EncryptedDirectory> {
         const q = 'Select i.*, ua.`EncryptedKey` from `inodes` i'
-        + ' join `user_access` ua on i.`INodeId` = ua.`INodeId`'
-        + ' where (i.`ParentId`=? OR i.`INodeId`=?) AND ua.`UserId`=?;'
+        + ' left join `user_access` ua on i.`INodeId` = ua.`INodeId`'
+        + ' where (i.`INodeId`=? OR i.`ParentId`=?) AND ua.`UserId`=?;';
         return this._db.query(q, [dirId, dirId, userId]).pipe(
             map(nodes => {
                 const dir = nodes.find(n => n.INodeId === dirId);

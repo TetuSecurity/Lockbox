@@ -42,7 +42,7 @@ export class SignupComponent extends SubscriberComponent {
             .subscribe(
                 _ => {
                     this.form.reset();
-                    this._router.navigate(['/']);
+                    this._router.navigate(['/files']);
                 },
                 err => {
                     this.error = 'Could not signup at this time'

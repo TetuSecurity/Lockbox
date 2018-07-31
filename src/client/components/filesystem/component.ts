@@ -3,6 +3,7 @@ import {SubscriberComponent} from '@core/';
 import {INode, Directory, File} from '@models/inode';
 import {FilesystemService} from '@services/filesystem/service';
 import {ActivatedRoute, Router} from '@angular/router';
+import {finalize} from 'rxjs/operators';
 
 @Component({
     selector: 'filesystem-root',
@@ -25,18 +26,17 @@ export class FilesystemComponent extends SubscriberComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        const id = this._route.snapshot.paramMap.get('id');
-        if (id) {
-            this.addSubscription(
-                this._filesService.getDirectory(id)
-                .subscribe(
-                    dir => this.currentDir = dir,
-                    err => console.error(err)
-                )
-            );
+        this.isLoading = true;
+        const snapshot = this._route.snapshot;
+        if (snapshot && snapshot.data && snapshot.data && snapshot.data.directory) {
+            this.currentDir = snapshot.data.directory;
+            this.isLoading = false;
         } else {
             this.addSubscription(
                 this._filesService.getRootDirectory()
+                .pipe(
+                    finalize(() => this.isLoading = false)
+                )
                 .subscribe(
                     root => this.currentDir = root,
                     err => console.error(err)
@@ -75,10 +75,24 @@ export class FilesystemComponent extends SubscriberComponent implements OnInit {
 
     routeOrDownload(node: INode) {
         if (node.IsDirectory) {
-            this._router.navigate(['/files', node.INodeId]);
+            this.isLoading = true;
+            this.addSubscription(
+                this._filesService.getDirectory(node.INodeId)
+                .pipe(finalize(() => this.isLoading = false))
+                .subscribe(dir => this.currentDir = dir)
+            );
         } else {
             this.downloadFile((node as File).FileId);
         }
+    }
+
+    routeToParent(nodeId: string) {
+        this.isLoading = true;
+        this.addSubscription(
+            this._filesService.getDirectory(nodeId)
+            .pipe(finalize(() => this.isLoading = false))
+            .subscribe(dir => this.currentDir = dir)
+        );
     }
 
     downloadFile(fileId: string) {

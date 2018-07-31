@@ -38,7 +38,7 @@ export class LoginComponent extends SubscriberComponent {
             .subscribe(
                 _ => {
                     this.form.reset();
-                    this._router.navigate(['/']);
+                    this._router.navigate(['/files']);
                 },
                 err => {
                     console.error(err);

@@ -25,21 +25,7 @@ export class FilesystemService {
             this._http.get<EncryptedDirectory>('/api/files/'),
             {cacheTime: 5*60*1000}
         ).pipe(
-            flatMap(encDir => {
-                return forkJoin(
-                    of(encDir.INodeId),
-                    ...(this.decryptChildren(encDir.Children || []))
-                );
-            }),
-            map(([id, ...children]) => {
-                const rootDir: Directory = {
-                    IsDirectory: true,
-                    INodeId: id,
-                    Children: children,
-                    Name: '/'
-                };
-                return rootDir;
-            })
+            flatMap(encDir => this.handleRootDir(encDir))
         );
     }
 
@@ -49,7 +35,13 @@ export class FilesystemService {
             this._http.get<EncryptedDirectory>(`/api/files/${id}`),
             {cacheTime: 30000}
         ).pipe(
-            flatMap((encD: EncryptedDirectory) => this.decryptDirectoryFull(encD))
+            flatMap((encD: EncryptedDirectory) => {
+                if (!!encD.ParentId) {
+                    return this.decryptDirectoryFull(encD);
+                } else {
+                    return this.handleRootDir(encD);
+                }
+            })
         );
     }
 
@@ -141,16 +133,39 @@ export class FilesystemService {
         );
     }
 
+    handleRootDir(encDir: EncryptedDirectory): Observable<Directory> {
+        return forkJoin(
+            of(encDir.INodeId),
+            ...(this.decryptChildren(encDir.Children || []))
+        ).pipe(
+            map(([id, ...children]) => {
+                const rootDir: Directory = {
+                    IsDirectory: true,
+                    INodeId: id,
+                    Children: children,
+                    Name: '/'
+                };
+                return rootDir;
+            })
+        );
+    }
+
     decryptDirectoryFull(encD: EncryptedDirectory): Observable<Directory> {
         return this._crypto.unwrapCEK(
             this._crypto.encodeText(encD.EncryptedKey, 'base64')
         ).pipe(
             flatMap((cek: CryptoKey) => {
                 return forkJoin(
-                    this._crypto.decryptData(
-                        this._crypto.encodeText(encD.EncryptedName, 'base64'),
-                        cek,
-                        this._crypto.encodeText(encD.IV, 'base64')
+                    (
+                        (!!encD.ParentId)
+                        ?
+                        this._crypto.decryptData(
+                            this._crypto.encodeText(encD.EncryptedName, 'base64'),
+                            cek,
+                            this._crypto.encodeText(encD.IV, 'base64')
+                        )
+                        :
+                        of(this._crypto.encodeText(encD.EncryptedName, 'utf8'))
                     ),
                     of(cek),
                     ...(this.decryptChildren(encD.Children || []))

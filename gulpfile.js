@@ -77,7 +77,7 @@ gulp.task('webpack-watch', function() {
 
 gulp.task('_watch', function(){
     console.log('watching for changes...');
-    gulp.watch('src/server/**/*.ts', gulp.series('start-server'));
+    gulp.watch('src/server/**/*.ts', gulp.series('compile-node', '_start-server'));
 });
 
 gulp.task(

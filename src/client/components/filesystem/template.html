@@ -22,7 +22,7 @@
                     <th>Last Modified</th>
                 </thead>
                 <tbody>
-                    <tr *ngIf="currentDir?.ParentId" [routerLink]="['/files', currentDir?.ParentId]">
+                    <tr *ngIf="currentDir?.ParentId" (click)="routeToParent(currentDir?.ParentId)">
                         <td>
                             ..
                         </td>
