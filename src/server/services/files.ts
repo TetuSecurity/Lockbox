@@ -8,7 +8,7 @@ export class FileService {
 
     constructor (private _db: DatabaseService) {}
 
-    createRootDir(userId: string): Observable<void> {
+    createRootDir(userId: string): Observable<any> {
         return this._db.getConnection().pipe(
             switchMap(conn => {
                 const rootNodeq = 'Insert into `inodes` (`INodeId`, `EncryptedName`, `IsDirectory`) VALUES(?, ?, 1);';

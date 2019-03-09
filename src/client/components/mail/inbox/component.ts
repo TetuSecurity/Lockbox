@@ -1,9 +1,9 @@
 import {Component, OnInit} from '@angular/core';
-import {SecureMessage, Message} from '@models/message';
-import {SubscriberComponent} from '@core/';
-import {CryptoService} from '@services/crypto/service';
-import {flatMap, map} from 'rxjs/operators';
 import {Observable} from 'rxjs';
+import {flatMap, map} from 'rxjs/operators';
+import {SubscriberComponent} from '@core/index';
+import {SecureMessage, Message} from '@models/message';
+import {ICryptoService} from '@services/crypto/index';
 
 @Component({
     selector: 'inbox',
@@ -15,7 +15,7 @@ export class InboxComponent extends SubscriberComponent implements OnInit {
     messages: Message[] = [];
 
     constructor(
-        private _crypto: CryptoService,
+        private _crypto: ICryptoService,
         // private _mail: MailService
     ) {
         super();

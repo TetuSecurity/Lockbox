@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {flatMap, map} from 'rxjs/operators';
-import {CryptoService} from '@services/crypto/service';
+import {ICryptoService} from '@services/crypto/index';
 import {SecureMessage} from '@models/message';
 
 @Injectable({
@@ -12,7 +12,7 @@ export class MailService {
 
     constructor(
         private  _http: HttpClient,
-        private _crypto: CryptoService
+        private _crypto: ICryptoService
     ) { }
 
     getPublicKey(keyholder: string): Observable<{Address: string, Key: CryptoKey}> {

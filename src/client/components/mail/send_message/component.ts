@@ -2,9 +2,9 @@ import {Component} from '@angular/core';
 import {FormGroup, Validators, FormControl, FormBuilder} from '@angular/forms';   
 import {Observable, forkJoin, of as ObservableOf} from 'rxjs';
 import {flatMap, map, finalize} from 'rxjs/operators';
-import {SubscriberComponent} from '@core/';
+import {SubscriberComponent} from '@core/index';
 import {SecureMessage, Message, SecureMetadata} from '@models/message';
-import {AuthService, MailService, CryptoService} from '@services/';
+import {AuthService, MailService, ICryptoService} from '@services/index';
 
 @Component({
     selector: 'send-message',
@@ -31,7 +31,7 @@ export class SendMessageComponent extends SubscriberComponent {
 
     constructor(
         private _fb: FormBuilder,
-        private _crypto: CryptoService,
+        private _crypto: ICryptoService,
         private _mail: MailService,
         private _auth: AuthService
     ) {

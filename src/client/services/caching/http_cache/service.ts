@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
-import { Observable, Subject, of as ObservableOf, ReplaySubject } from 'rxjs';
-import { tap, finalize } from 'rxjs/operators';
+import { Injectable, OnDestroy } from '@angular/core';
+import { Observable, Subject, of as ObservableOf, ReplaySubject, Subscription, timer } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { BrowserStorageService } from '@services/caching/browser_storage/service';
 
 // interface only used locally
@@ -21,13 +21,15 @@ const DEFAULT_CACHE_TIME = 30000; // 30 second cache time
 @Injectable({
   providedIn: 'root'
 })
-export class HttpCacheService {
+export class HttpCacheService implements OnDestroy {
 
     private _cache: {[key: string]: CacheValue<any>} = {};
     private _inFlight: {[key: string]: Subject<any>} = {};
 
+    private _reaper: Subscription;
+
     constructor(
-        private _store: BrowserStorageService
+        private _store: BrowserStorageService,
     ) {
         try {
             const shcIndexString = this._store.getSession('shcindex');
@@ -46,9 +48,39 @@ export class HttpCacheService {
                 });
             }
         } catch (e) {
-            console.error('could not restore cache');
+            // do nothing
         }
 
+        this._reaper = timer(0, 60*1000)
+        .subscribe(
+            _ => {
+                const now = new Date().valueOf();
+                Object.keys(this._cache).forEach(ck => {
+                    const val: CacheValue<any> = this._cache[ck];
+                    if (val.expiration >=0 && val.expiration <= now) {
+                        delete this._cache[ck];
+                        try {
+                            this._store.removeSession(`shc_${ck}`);
+                            this._store.setSession(`shcindex`, JSON.stringify(Object.keys(this._cache)));
+                        } catch (e) {
+                            // do nothing
+                        }
+                    }
+                });
+                this._store.setSession(`shcindex`, JSON.stringify(Object.keys(this._cache)));
+            }
+        );
+    }
+
+    ngOnDestroy() {
+        if (this._reaper) {
+            try {
+                this._reaper.unsubscribe();
+                this._reaper = undefined;
+            } catch (e) {
+                // do nothing
+            }
+        }
     }
 
     cacheRequest<T>(keyName: string, fallback: Observable<T>, cacheOpts: CacheOpts = {}): Observable<T> {
@@ -56,7 +88,7 @@ export class HttpCacheService {
         if (this._cache[keyName] && (this._cache[keyName].expiration >= now || this._cache[keyName].expiration < 0)) {
             return ObservableOf(this._cache[keyName].value as T);
         }
-        if (this._inFlight[keyName] && !this._inFlight[keyName].closed) {
+        if (this._inFlight[keyName] && !this._inFlight[keyName].closed && !this._inFlight[keyName].hasError) {
             return this._inFlight[keyName];
         } else {
             this._inFlight[keyName] = new ReplaySubject<T>(1);
@@ -69,11 +101,21 @@ export class HttpCacheService {
                     this.cacheResult(keyName, result, cacheOpts);
                 }, err => { // propagate errors to all listeners
                     if (this._inFlight[keyName]) {
-                        this._inFlight[keyName].error(err);
+                        try {
+                            this._inFlight[keyName].error(err);
+                        } catch (e) {
+                            // do nothing, its already closed;
+                        }
+                        delete this._inFlight[keyName];
                     }
                 }, () => {
-                    if (this._inFlight[keyName] && !this._inFlight[keyName].closed) {
-                        this._inFlight[keyName].complete();
+                    if (this._inFlight[keyName]) {
+                        try {
+                            this._inFlight[keyName].complete();
+                        } catch (e) {
+                            // do nothing, its already closed;
+                        }
+                        delete this._inFlight[keyName];
                     }
                 })
             );
@@ -130,8 +172,17 @@ export class HttpCacheService {
         this._cache = {};
         Object.keys(this._inFlight).forEach(inf => {
             this._inFlight[inf].complete();
+            delete this._inFlight[inf];
         });
         this._inFlight = {};
+    }
+
+    invalidateCachePattern(pattern: RegExp): void {
+        const cacheKeys = Object.keys(this._cache).map(k => k.replace(/^shc_/, ''));
+        const matches = cacheKeys.filter(k => pattern.test(k));
+        matches.forEach(m => {
+            this.invalidateCache(m);
+        });
     }
 
     private _setInCache<T>(keyname: string, result: CacheValue<T>) {

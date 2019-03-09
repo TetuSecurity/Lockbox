@@ -77,7 +77,7 @@ module.exports = (APP_CONFIG: Config) => {
         if (!userId) {
             return res.status(401).send('Not Authorized');
         }
-        const fileId = 
+        const fileId ='';
     });
     
     // Return middleware router

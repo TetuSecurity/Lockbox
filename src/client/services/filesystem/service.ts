@@ -1,10 +1,10 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {Observable, forkJoin, pipe, of} from 'rxjs';
-import {flatMap, map, switchMap} from 'rxjs/operators';
+import {Observable, forkJoin, of} from 'rxjs';
+import {map, switchMap} from 'rxjs/operators';
 import {EncryptedDirectory, Directory, EncryptedFile, EncryptedINode, INode, File as DecryptedFile} from '@models/inode';
 import {HttpCacheService} from '@services/caching';
-import {CryptoService} from '@services/crypto/service';
+import {ICryptoService} from '@services/crypto/index';
 
 @Injectable({
     providedIn: 'root'
@@ -14,7 +14,7 @@ export class FilesystemService {
     constructor(
         private _http: HttpClient,
         private _cache: HttpCacheService,
-        private _crypto: CryptoService
+        private _crypto: ICryptoService
     ) {
 
     }

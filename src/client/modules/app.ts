@@ -2,8 +2,9 @@ import {NgModule} from '@angular/core';
 import {RouterModule, ExtraOptions, PreloadAllModules} from '@angular/router';
 import {BrowserModule} from '@angular/platform-browser';
 import {SharedModule} from '@modules/shared';
-import {AppComponent} from '@components/';
-import {IsLoggedInGuard, NotLoggedInGuard} from '@guards/'
+import {AppComponent} from '@components/index';
+import {IsLoggedInGuard, NotLoggedInGuard} from '@guards/index'
+import {ICryptoService, WebCryptoService} from '@services/index';
 
 const opts: ExtraOptions = {
     enableTracing: true,
@@ -20,9 +21,9 @@ const opts: ExtraOptions = {
         SharedModule,
         RouterModule.forRoot(
             [
-                {path: 'login', loadChildren: './routes/+login/module#LazyLoginModule'},
-                {path: 'signup', loadChildren: './routes/+signup/module#LazySignupModule'},
-                {path: 'files', loadChildren: './routes/+files/module#LazyFilesModule'},
+                {path: 'login', canLoad: [NotLoggedInGuard], loadChildren: './routes/+login/module#LazyLoginModule'},
+                {path: 'signup', canLoad: [NotLoggedInGuard], loadChildren: './routes/+signup/module#LazySignupModule'},
+                {path: 'files', canLoad: [IsLoggedInGuard], loadChildren: './routes/+files/module#LazyFilesModule'},
                 {path: '', loadChildren: './routes/+mail/module#LazyMailModule'},
             ],
             opts
@@ -30,6 +31,11 @@ const opts: ExtraOptions = {
     ],
     declarations: [
         AppComponent
+    ],
+    providers: [
+        {
+            provide: ICryptoService, useClass: WebCryptoService
+        }
     ]
 })
 export class AppModule {}

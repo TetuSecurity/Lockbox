@@ -1,12 +1,13 @@
 import {Injectable} from '@angular/core';
 import {from, Observable} from 'rxjs';
-import {map, tap} from 'rxjs/operators';
+import {map} from 'rxjs/operators';
 import {BrowserStorageService} from '@services/caching';
+import {ICryptoService} from './interface';
 
 @Injectable({
     providedIn: 'root'
 })
-export class CryptoService {
+export class WebCryptoService implements ICryptoService {
     private _cryptoHelpers;
     private _crypto;
     private _privKey: CryptoKey;
@@ -16,7 +17,7 @@ export class CryptoService {
         private _store: BrowserStorageService
     ) {
         try {
-            this._cryptoHelpers = (window.crypto || window['mscrypto'])
+            this._cryptoHelpers = (window['crypto'] || window['mscrypto'])
             this._crypto = this._cryptoHelpers.subtle;
             this.loadPrivateKey();
             this.loadPublicKey();
@@ -111,7 +112,7 @@ export class CryptoService {
 
     // SHA-512
     hash(data: ArrayBuffer): Observable<ArrayBuffer> {
-        return from<ArrayBuffer>(
+        return from<Promise<ArrayBuffer>>(
             this._crypto.digest(
                 {
                     name: 'SHA-512'
@@ -123,7 +124,7 @@ export class CryptoService {
 
     // PBKDF2
     generatePasswordKey(password: ArrayBuffer): Observable<CryptoKey> {
-        return from<CryptoKey>(
+        return from<Promise<CryptoKey>>(
             this._crypto.importKey(
                 'raw',
                 password,
@@ -135,7 +136,7 @@ export class CryptoService {
     }
 
     deriveWrapper(passKey: CryptoKey, salt: ArrayBuffer): Observable<CryptoKey> {
-        return from<CryptoKey>(
+        return from<Promise<CryptoKey>>(
             this._crypto.deriveKey(
                 {
                     name: 'PBKDF2',
@@ -156,7 +157,7 @@ export class CryptoService {
 
     // AES-GCM
     generateAESKey(): Observable<CryptoKey> {
-        return from<CryptoKey>(
+        return from<Promise<CryptoKey>>(
             this._crypto.generateKey(
                 {
                     name: 'AES-GCM',
@@ -170,7 +171,7 @@ export class CryptoService {
 
     // Encrypt the RSA Private Key for storage on server
     wrapPrivateKey(wrappingKey: CryptoKey, privateKey: CryptoKey, iv: ArrayBuffer): Observable<string> {
-        return from<ArrayBuffer>(
+        return from<Promise<ArrayBuffer>>(
             this._crypto.wrapKey(
                 'pkcs8',
                 privateKey,
@@ -187,7 +188,7 @@ export class CryptoService {
 
     // Decrypt the private key stored on server
     unwrapPrivateKey(wrappingKey: CryptoKey, wrapped: ArrayBuffer, iv: ArrayBuffer): Observable<CryptoKey> {
-        return from<CryptoKey>(
+        return from<Promise<CryptoKey>>(
             this._crypto.unwrapKey(
                 'pkcs8',
                 wrapped,
@@ -207,7 +208,7 @@ export class CryptoService {
     }
     // encrypt actual data
     encryptData(data: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer): Observable<ArrayBuffer> {
-        return from<ArrayBuffer>(
+        return from<Promise<ArrayBuffer>>(
             this._crypto.encrypt(
                 {
                     name: 'AES-GCM',
@@ -221,7 +222,7 @@ export class CryptoService {
 
     // decrypt actual data
     decryptData(data: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer): Observable<ArrayBuffer> {
-        return from<ArrayBuffer>(
+        return from<Promise<ArrayBuffer>>(
             this._crypto.decrypt(
                 {
                     name: 'AES-GCM',
@@ -235,7 +236,7 @@ export class CryptoService {
 
     // RSA-OAEP
     generateKeypair(): Observable<CryptoKeyPair> {
-        return from<CryptoKeyPair>(
+        return from<Promise<CryptoKeyPair>>(
             this._crypto.generateKey(
                 {
                     name: 'RSA-OAEP',
@@ -250,7 +251,7 @@ export class CryptoService {
     }
 
     wrapCEK(key: CryptoKey, wrapper?: CryptoKey): Observable<ArrayBuffer> {
-        return from<ArrayBuffer>(
+        return from<Promise<ArrayBuffer>>(
             this._crypto.wrapKey(
                 'raw',
                 key,
@@ -264,7 +265,7 @@ export class CryptoService {
     }
 
     unwrapCEK(wrapped: ArrayBuffer, unwrapper?: CryptoKey): Observable<CryptoKey> {
-        return from<CryptoKey>(
+        return from<Promise<CryptoKey>>(
             this._crypto.unwrapKey(
                 'raw',
                 wrapped,
@@ -286,7 +287,7 @@ export class CryptoService {
     }
 
     exportPublicKey(publicKey: CryptoKey): Observable<string> {
-        return from<any>(
+        return from<Promise<ArrayBuffer>>(
             this._crypto.exportKey(
                 'spki',
                 publicKey
@@ -297,7 +298,7 @@ export class CryptoService {
     }
 
     importPublicKey(keystring: ArrayBuffer): Observable<CryptoKey> {
-        return from<CryptoKey>(
+        return from<Promise<CryptoKey>>(
             this._crypto.importKey(
                 'spki',
                 keystring,
@@ -312,7 +313,7 @@ export class CryptoService {
     }
 
     importPrivateKey(keystring: ArrayBuffer): Observable<CryptoKey> {
-        return from<CryptoKey>(
+        return from<Promise<CryptoKey>>(
             this._crypto.importKey(
                 'pkcs8',
                 keystring,
@@ -330,7 +331,7 @@ export class CryptoService {
 
     // Only use to store against refreshes, do not use outside this service
     private _exportPrivateKey(privateKey: CryptoKey): Observable<string> {
-        return from<ArrayBuffer>(
+        return from<Promise<ArrayBuffer>>(
             this._crypto.exportKey(
                 'pkcs8',
                 privateKey

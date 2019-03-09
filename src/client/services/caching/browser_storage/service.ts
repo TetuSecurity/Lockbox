@@ -9,8 +9,8 @@ export class BrowserStorageService {
     private _supportsLocal: boolean;
     private _supportsSession: boolean;
     private _inMem = {};
+    private _isServer: boolean;
 
-    // determine if browser supports local and session storage, fallback to inMem
     constructor() {
         try {
             localStorage.setItem('_bs_testLocal', 'stored');
@@ -58,12 +58,16 @@ export class BrowserStorageService {
     getItem(key: string, locations: StorageLocation[] = ['local', 'session', 'memory']): string {
         for (let i=0; i < locations.length; i++) {
             const loc = locations[i];
+            let val;
             if (loc === 'local' && this._supportsLocal) {
-                return this.getLocal(key);
+                val = this.getLocal(key);
             } else if (loc === 'session' && this._supportsSession) {
-                return this.getSession(key);
+                val = this.getSession(key);
             } else if (loc === 'memory') {
-                return this.getInMem(key);
+                val = this.getInMem(key);
+            }
+            if (typeof val !== 'undefined' && val !== null) { // check if we found it
+                return val;
             }
         }
     }
@@ -154,5 +158,4 @@ export class BrowserStorageService {
     clearInMem() {
         this._inMem = {};
     }
-
 }

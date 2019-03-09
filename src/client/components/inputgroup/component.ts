@@ -1,6 +1,6 @@
 import {Component, Input, ViewChild, ElementRef, forwardRef} from '@angular/core';
 import {ControlValueAccessor, NG_VALUE_ACCESSOR, AbstractControl} from '@angular/forms';
-import {FormErrorParser} from '@core/';
+import {FormErrorParser} from '@core/index';
 
 export const INPUT_GROUP_VALUE_ACCESSOR : any = {
     provide: NG_VALUE_ACCESSOR,

@@ -1,7 +1,7 @@
 import {Injectable} from '@angular/core';
 import {Resolve, ActivatedRouteSnapshot, RouterStateSnapshot, Router} from '@angular/router';
 import {Observable, of, empty, throwError} from 'rxjs';
-import {Directory} from '@models/';
+import {Directory} from '@models/index';
 import {FilesystemService} from '@services/filesystem/service';
 import {flatMap, catchError} from 'rxjs/operators';
 

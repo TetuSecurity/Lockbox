@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {SubscriberComponent} from '@core/';
+import {SubscriberComponent} from '@core/index';
 import {INode, Directory, File} from '@models/inode';
 import {FilesystemService} from '@services/filesystem/service';
 import {ActivatedRoute, Router} from '@angular/router';

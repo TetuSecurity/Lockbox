@@ -2,9 +2,9 @@ import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable, forkJoin, of as ObservableOf, empty, of} from 'rxjs';
 import {map, flatMap, tap, finalize, catchError} from 'rxjs/operators';
-import {CryptoService} from '@services/crypto/service';
+import {ICryptoService} from '@services/crypto/index';
 import {BrowserStorageService, HttpCacheService} from '@services/caching';
-import {LoginResponse} from '@models/';
+import {LoginResponse} from '@models/index';
 
 @Injectable({
     providedIn: 'root'
@@ -16,7 +16,7 @@ export class AuthService {
     constructor(
         private _http: HttpClient,
         private _cache: HttpCacheService,
-        private _crypto: CryptoService,
+        private _crypto: ICryptoService,
         private _store: BrowserStorageService
     ) {
         try {

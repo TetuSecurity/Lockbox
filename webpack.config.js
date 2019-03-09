@@ -3,7 +3,8 @@ var webpack = require('webpack');
 var workbox = require('workbox-webpack-plugin');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 var HtmlWebpackExcludeAssetsPlugin = require('html-webpack-exclude-assets-plugin');
-var MiniCssPlugin = require('mini-css-extract-plugin');
+var HtmlWebpackLinkTypePlugin = require('html-webpack-link-type-plugin').HtmlWebpackLinkTypePlugin;
+var MiniCssExtractPlugin = require('mini-css-extract-plugin');
 var autoprefixer = require('autoprefixer');
 var cssnano = require('cssnano');
 var CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -17,13 +18,13 @@ var bundles = ['common', 'polyfills', 'vendor', 'app', 'styles'];
 var config = {
     mode: 'none',
     entry: {
-        'app': path.join(__dirname,'./src/client/main.ts'),
-        'vendor': path.join(__dirname,'./src/client/vendor.ts'),
-        'polyfills': path.join(__dirname,'./src/client/polyfills.ts'),
-        'styles': path.join(__dirname, './src/client/scss/styles.scss')
+        app: path.join(__dirname,'./src/client/main.ts'),
+        vendor: path.join(__dirname,'./src/client/vendor.ts'),
+        polyfills: path.join(__dirname,'./src/client/polyfills.ts'),
+        styles: path.join(__dirname, './src/client/scss/styles.scss')
     },
     output: {
-        filename: '[name].[hash].min.js',
+        filename: '[name].[contenthash].min.js',
         path: path.join(__dirname, 'dist/client'),
         pathinfo: true
     },
@@ -71,7 +72,7 @@ var config = {
                 ],
                 use: [
                     {
-                        loader: MiniCssPlugin.loader
+                        loader: MiniCssExtractPlugin.loader
                     },
                     {
                         loader: 'css-loader'
@@ -116,9 +117,6 @@ var config = {
                             limit: 10*1024,
                             name: 'fonts/[name].svg'
                         }
-                    },
-                    {
-                        loader: 'svgo-loader'
                     }
                 ]
             },
@@ -142,9 +140,6 @@ var config = {
                             limit: 10*1024,
                             name: 'assets/images/[name].svg'
                         }
-                    },
-                    {
-                        loader: 'svgo-loader'
                     }
                 ]
             },
@@ -163,9 +158,9 @@ var config = {
         splitChunks: {
             cacheGroups: {
                 commons: {
-                    name: 'common',
-                    chunks: 'initial',
-                    minChunks: 2
+                  name: 'common',
+                  chunks: 'initial',
+                  minChunks: 2
                 }
             }
         },
@@ -182,7 +177,8 @@ var config = {
                     }
                 }
             })
-        ]
+        ],
+        concatenateModules: true
     },
     plugins: [
         new HtmlWebpackPlugin({
@@ -197,13 +193,14 @@ var config = {
             },
         }),
         new HtmlWebpackExcludeAssetsPlugin(),
+        new HtmlWebpackLinkTypePlugin(),
         new AotPlugin({
-            tsConfigPath: path.join(__dirname, './src/client/tsconfig.json'),
+            tsConfigPath: path.join(__dirname, './src/client/tsconfig.app.json'),
             mainPath: path.join(__dirname, './src/client/main.ts'),
             typeChecking: false,
         }),
-        new MiniCssPlugin({
-            filename: 'styles.[hash].min.css'
+        new MiniCssExtractPlugin ({
+            filename: '[name].[contenthash].min.css'
         }),
         new CircularDependencyPlugin({
             exclude: /node_modules/,
@@ -215,8 +212,16 @@ var config = {
                 to: path.join(__dirname, './dist/client/assets')
             },
             {
+                from: path.join(__dirname, './src/client/robots.txt'),
+                to: path.join(__dirname, './dist/client/robots.txt')
+            },
+            {
                 from: path.join(__dirname, './src/client/manifest.json'),
                 to: path.join(__dirname, './dist/client/manifest.json')
+            },
+            {
+                from: path.join(__dirname, './src/client/.well-known'),
+                to: path.join(__dirname, './dist/client/.well-known')
             }
         ]),
         new NormalModuleReplacementPlugin(/environments\/environment/, function(resource) {
@@ -227,7 +232,7 @@ var config = {
             swDest: 'sw.js',
             importsDirectory: 'wb-assets',
             exclude: [
-                /index.html/i, // no index in precache
+                /index\.html$/i, // do not cache index, so lazy loaded modules are fetched correctly
                 /styles\..*\.min\.js/i, // empty bundle file from extractText
                 /[0-9]+\..*?\.min\.js$/i, // lazy-loaded bundles
                 /\.map/i, // source-maps

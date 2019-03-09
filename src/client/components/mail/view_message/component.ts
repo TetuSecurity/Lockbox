@@ -1,9 +1,9 @@
 import {Component, OnInit} from '@angular/core';
 import {Observable, forkJoin, of as ObservableOf} from 'rxjs';
 import {flatMap, map, tap} from 'rxjs/operators';
-import {SubscriberComponent} from '@core/';
+import {SubscriberComponent} from '@core/index';
 import {SecureMessage, Message, SecureMetadata} from '@models/message';
-import {CryptoService} from '@services/';
+import {ICryptoService} from '@services/crypto/index';
 
 @Component({
     selector: 'view-message',
@@ -15,7 +15,7 @@ export class ViewMessageComponent extends SubscriberComponent implements OnInit{
     message: Message;
     
     constructor(
-        private _crypto: CryptoService,
+        private _crypto: ICryptoService,
     ) {
         super();
     }
