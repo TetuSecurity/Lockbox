@@ -1,8 +1,8 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable, forkJoin, pipe, of} from 'rxjs';
-import {flatMap, map} from 'rxjs/operators';
-import {EncryptedDirectory, Directory, EncryptedFile, File, EncryptedINode, INode} from '@models/inode';
+import {flatMap, map, switchMap} from 'rxjs/operators';
+import {EncryptedDirectory, Directory, EncryptedFile, EncryptedINode, INode, File as DecryptedFile} from '@models/inode';
 import {HttpCacheService} from '@services/caching';
 import {CryptoService} from '@services/crypto/service';
 
@@ -25,7 +25,7 @@ export class FilesystemService {
             this._http.get<EncryptedDirectory>('/api/files/'),
             {cacheTime: 5*60*1000}
         ).pipe(
-            flatMap(encDir => this.handleRootDir(encDir))
+            switchMap(encDir => this.handleRootDir(encDir))
         );
     }
 
@@ -35,7 +35,7 @@ export class FilesystemService {
             this._http.get<EncryptedDirectory>(`/api/files/${id}`),
             {cacheTime: 30000}
         ).pipe(
-            flatMap((encD: EncryptedDirectory) => {
+            switchMap((encD: EncryptedDirectory) => {
                 if (!!encD.ParentId) {
                     return this.decryptDirectoryFull(encD);
                 } else {
@@ -56,7 +56,7 @@ export class FilesystemService {
         };
         return this._crypto.generateAESKey()
         .pipe(
-            flatMap(aesKey => {
+            switchMap(aesKey => {
                 const iv = this._crypto.generateRandomness();
                 dir.IV = this._crypto.decodeText(iv, 'base64');
                 dir.Key = aesKey;
@@ -69,7 +69,7 @@ export class FilesystemService {
                     this._crypto.wrapCEK(aesKey)
                 );
             }),
-            flatMap(([encryptedNameBuf, encryptedKeyBuf]) => {
+            switchMap(([encryptedNameBuf, encryptedKeyBuf]) => {
                 const encryptedName = this._crypto.decodeText(encryptedNameBuf, 'base64');
                 const encryptedKey = this._crypto.decodeText(encryptedKeyBuf, 'base64');
                 const encDir = {
@@ -89,48 +89,76 @@ export class FilesystemService {
         );
     }
 
-    addFile(parentId: string, name: string, mimeType: string): Observable<File> {
+    addFile(parentId: string, file: File): Observable<DecryptedFile> {
         this._cache.invalidateCache('root_dir'); // just in case
         this._cache.invalidateCache(`dir_${parentId}`);
-        const file: any = { // partial file
+        const decfile: any = { // partial file
             IsDirectory: false,
-            Name: name,
+            Name: file.name,
             ParentId: parentId,
-            MimeType: mimeType
+            MimeType: file.type
         };
         return this._crypto.generateAESKey()
         .pipe(
-            flatMap(aesKey => {
+            switchMap(aesKey => {
                 const iv = this._crypto.generateRandomness();
-                file.IV = this._crypto.decodeText(iv, 'base64');
-                file.Key = aesKey;
+                decfile.IV = this._crypto.decodeText(iv, 'base64');
+                decfile.Key = aesKey;
                 return forkJoin(
                     this._crypto.encryptData(
-                        this._crypto.encodeText(name, 'utf8'),
+                        this._crypto.encodeText(file.name, 'utf8'),
                         aesKey,
                         iv
                     ),
                     this._crypto.wrapCEK(aesKey)
                 );
             }),
-            flatMap(([encryptedNameBuf, encryptedKeyBuf]) => {
+            switchMap(([encryptedNameBuf, encryptedKeyBuf]) => {
                 const encryptedName = this._crypto.decodeText(encryptedNameBuf, 'base64');
                 const encryptedKey = this._crypto.decodeText(encryptedKeyBuf, 'base64');
                 const encFile = {
                     EncryptedName:  encryptedName,
                     EncryptedKey: encryptedKey,
                     IsDirectory: false,
-                    IV: file.IV,
-                    MimeType: mimeType,
+                    IV: decfile.IV,
+                    MimeType: decfile.mimeType,
                     ParentId: parentId
                 };
-                return this._http.post<EncryptedDirectory>('/api/files', encFile);
+                return this._http.post<EncryptedFile>('/api/files', encFile);
             }),
-            map(encFile => {
-                file.INodeId = encFile.INodeId;
-                return file;
-            })
+            switchMap(encFile => {
+                decfile.INodeId = encFile.INodeId;
+                decfile.FileId = encFile.FileId;
+                return this.readFile(file);
+            }),
+            switchMap(contents => this._crypto.encryptData(contents, decfile.Key, decfile.IV)),
+            switchMap(encryptedContents => {
+                const encContents = this._crypto.decodeText(encryptedContents, 'base64');
+                return this._http.post(`/api/files/content/${decfile.FileId}`, encContents);
+            }),
+            map(_ => decfile)
         );
+    }
+
+    readFile(file: File): Observable<ArrayBuffer> {
+        return Observable.create(obs => {
+            let errored = false;
+            const reader = new FileReader();
+
+            reader.addEventListener('error', (err) => {
+                errored = true;
+                obs.error(err);
+            });
+
+            reader.addEventListener('load', () => {
+                if (!errored) {
+                    obs.next(reader.result);
+                    return obs.complete();
+                }
+            }, false);
+
+            reader.readAsArrayBuffer(file);
+        });
     }
 
     handleRootDir(encDir: EncryptedDirectory): Observable<Directory> {
@@ -154,7 +182,7 @@ export class FilesystemService {
         return this._crypto.unwrapCEK(
             this._crypto.encodeText(encD.EncryptedKey, 'base64')
         ).pipe(
-            flatMap((cek: CryptoKey) => {
+            switchMap((cek: CryptoKey) => {
                 return forkJoin(
                     (
                         (!!encD.ParentId)
@@ -191,7 +219,7 @@ export class FilesystemService {
         return this._crypto.unwrapCEK(
             this._crypto.encodeText(encD.EncryptedKey, 'base64')
         ).pipe(
-            flatMap((cek: CryptoKey) => {
+            switchMap((cek: CryptoKey) => {
                 return forkJoin(
                     this._crypto.decryptData(
                         this._crypto.encodeText(encD.EncryptedName, 'base64'),
@@ -217,11 +245,11 @@ export class FilesystemService {
         );
     }
 
-    decryptFile(encF: EncryptedFile): Observable<File> {
+    decryptFile(encF: EncryptedFile): Observable<DecryptedFile> {
         return this._crypto.unwrapCEK(
             this._crypto.encodeText(encF.EncryptedKey, 'base64')
         ).pipe(
-            flatMap((cek: CryptoKey) => {
+            switchMap((cek: CryptoKey) => {
                 return forkJoin(
                     this._crypto.decryptData(
                         this._crypto.encodeText(encF.EncryptedName, 'base64'),
@@ -234,7 +262,7 @@ export class FilesystemService {
             }),
             map(([nameBuf, mimeType, cek]: [ArrayBuffer, string, CryptoKey]) => {
                 const name = this._crypto.decodeText(nameBuf, 'utf8');
-                const f: File = {
+                const f: DecryptedFile = {
                     IsDirectory: false,
                     INodeId: encF.INodeId,
                     IV: encF.IV,

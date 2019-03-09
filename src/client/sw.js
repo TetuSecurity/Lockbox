@@ -1,17 +1,37 @@
-workbox.skipWaiting();
-workbox.clientsClaim();
+workbox.core.skipWaiting();
+workbox.core.clientsClaim();
+
+var apiSync = new workbox.backgroundSync.Plugin('api_queue', {
+    maxRetentionTime: 24 * 60 // Retry for max of 24 Hours
+});
+
 
 workbox.routing.registerRoute(
-    /index\.html/i, 
+    /\/api\//i,
+    workbox.strategies.networkOnly({
+        plugins: [
+            apiSync,
+            new workbox.expiration.Plugin({
+                maxAgeSeconds: 86400,
+                purgeOnQuotaError: true // don't use up storage we need elsewhere
+            })
+        ]
+    }),
+    'POST'
+);
+
+workbox.routing.registerRoute(
+    /index\.html$/i,
     workbox.strategies.networkFirst({ 
-        networkTimeoutSeconds: 3, 
+        networkTimeoutSeconds: 5, 
         cacheName: 'index-cache',
         plugins: [
             new workbox.cacheableResponse.Plugin({
-                statuses: [200]
+                statuses: [200],
             }),
             new workbox.expiration.Plugin({
-                maxEntries: 1
+                maxEntries: 1, // THERE CAN BE ONLY ONE
+                purgeOnQuotaError: false // we need this
             })
         ]
     }), 
@@ -40,6 +60,10 @@ workbox.routing.registerRoute(
         plugins: [
             new workbox.cacheableResponse.Plugin({
                 statuses: [200]
+            }),
+            new workbox.expiration.Plugin({
+                maxAgeSeconds: 86400,
+                purgeOnQuotaError: true // Will refetch on page load
             })
         ]
     }), 
@@ -47,12 +71,29 @@ workbox.routing.registerRoute(
 );
 
 workbox.routing.registerRoute(
-    /^http.*\.((ico)|(jpg)|(png)|(svg)|(woff(2?))|(eot)|(ttf)|(xml))$/i, 
+    /^.*font.*\.((svg)|(woff(2?))|(eot)|(ttf))$/i, 
+    workbox.strategies.staleWhileRevalidate({ 
+        cacheName: 'font-cache', 
+        plugins: [
+            new workbox.cacheableResponse.Plugin({
+                statuses: [200],
+            }),
+            new workbox.expiration.Plugin({
+                maxAgeSeconds: 86400,
+                purgeOnQuotaError: true // they are fonts, get rid of them for more important stuff
+            })
+        ] 
+    }), 
+    'GET'
+);
+
+workbox.routing.registerRoute(
+    /^.*\/app\/.*\.((ico)|(jpg)|(png)|(svg))$/i, 
     workbox.strategies.staleWhileRevalidate({ 
         cacheName: 'asset-cache', 
         plugins: [
             new workbox.cacheableResponse.Plugin({
-                statuses: [0, 200],
+                statuses: [200],
             }),
             new workbox.expiration.Plugin({
                 maxAgeSeconds: 86400,

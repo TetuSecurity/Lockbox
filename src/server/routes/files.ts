@@ -71,6 +71,14 @@ module.exports = (APP_CONFIG: Config) => {
             );
         }
     });
+
+    router.post('/contents/:id', (req, res, next) => {
+        const userId = res.locals.usersession.UserId;
+        if (!userId) {
+            return res.status(401).send('Not Authorized');
+        }
+        const fileId = 
+    });
     
     // Return middleware router
     return router;

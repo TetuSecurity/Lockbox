@@ -62,7 +62,7 @@ export class FilesystemComponent extends SubscriberComponent implements OnInit {
             const files: FileList = event.target.files;
             const file = files[0];
             this.addSubscription(
-                this._filesService.addFile(this.currentDir.INodeId, file.name, file.type)
+                this._filesService.addFile(this.currentDir.INodeId, file)
                 .subscribe(
                     f => {
                         this.currentDir.Children.push(f);

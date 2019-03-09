@@ -15,3 +15,7 @@ export interface Config {
     fileService?: FileService;
     logger?: LoggingService
 }
+
+export interface FSConfig {
+    root: string;
+}
