@@ -2,7 +2,7 @@ import {NgModule} from '@angular/core';
 import {RouterModule, ExtraOptions, PreloadAllModules} from '@angular/router';
 import {BrowserModule} from '@angular/platform-browser';
 import {SharedModule} from '@modules/shared';
-import {AppComponent} from '@components/index';
+import {AppComponent, NotFoundComponent} from '@components/index';
 import {IsLoggedInGuard, NotLoggedInGuard} from '@guards/index'
 import {ICryptoService, WebCryptoService} from '@services/index';
 
@@ -25,12 +25,15 @@ const opts: ExtraOptions = {
                 {path: 'signup', canLoad: [NotLoggedInGuard], loadChildren: './routes/+signup/module#LazySignupModule'},
                 {path: 'files', canLoad: [IsLoggedInGuard], loadChildren: './routes/+files/module#LazyFilesModule'},
                 {path: '', loadChildren: './routes/+mail/module#LazyMailModule'},
+                {path: '404', component: NotFoundComponent},
+                {path: '**', redirectTo: '/404'}
             ],
             opts
         )
     ],
     declarations: [
-        AppComponent
+        AppComponent,
+        NotFoundComponent,
     ],
     providers: [
         {

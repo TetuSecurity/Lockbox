@@ -10,6 +10,7 @@ import {LoginComponent} from '@components/index';
         RouterModule.forChild(
             [
                 {path: '', pathMatch: 'full', canActivate: [NotLoggedInGuard], component: LoginComponent},
+                {path: '**', redirectTo: '/404'}
             ]
         )
     ],

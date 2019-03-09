@@ -19,21 +19,40 @@ export class DirectoryResolver implements Resolve<Directory> {
 
     resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<Directory> {
         const id = route.paramMap.get('id');
-        return this._files.getDirectory(id)
-        .pipe(
-            flatMap(
-                dir => {
-                    if (!dir) {
-                        return throwError('404');
-                    } else {
-                        return of(dir);
+        if (id) {
+            return this._files.getDirectory(id)
+            .pipe(
+                flatMap(
+                    dir => {
+                        if (!dir) {
+                            return throwError('404');
+                        } else {
+                            return of(dir);
+                        }
                     }
-                }
-            ),
-            catchError(e => {
-                this._router.navigate(['/files']);
-                return empty();
-            })
-        );
+                ),
+                catchError(e => {
+                    this._router.navigate(['/files']);
+                    return empty();
+                })
+            );
+        } else {
+            this._files.getRootDirectory()
+            .pipe(
+                flatMap(
+                    dir => {
+                        if (!dir) {
+                            return throwError('404');
+                        } else {
+                            return of(dir);
+                        }
+                    }
+                ),
+                catchError(e => {
+                    this._router.navigate(['/404']);
+                    return empty();
+                })
+            );
+        }
     }
 }

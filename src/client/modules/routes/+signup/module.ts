@@ -9,6 +9,7 @@ import {SignupComponent} from '@components/auth/signup/component';
         RouterModule.forChild(
             [
                 {path: '', pathMatch: 'full', component: SignupComponent},
+                {path: '**', redirectTo: '/404'}
             ]
         )
     ],

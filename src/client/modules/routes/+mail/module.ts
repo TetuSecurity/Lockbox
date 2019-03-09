@@ -11,7 +11,8 @@ import {IsLoggedInGuard} from '@guards/loggedin';
             [
                 {path: '', pathMatch: 'full', canActivate: [IsLoggedInGuard], component: InboxComponent},
                 {path: 'send', canActivate: [IsLoggedInGuard], component: SendMessageComponent},
-                {path: 'view', canActivate: [IsLoggedInGuard], component: ViewMessageComponent}
+                {path: 'view', canActivate: [IsLoggedInGuard], component: ViewMessageComponent},
+                {path: '**', redirectTo: '/404'}
             ]
         )
     ],

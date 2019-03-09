@@ -121,7 +121,7 @@ export class FilesystemService {
                     EncryptedKey: encryptedKey,
                     IsDirectory: false,
                     IV: decfile.IV,
-                    MimeType: decfile.mimeType,
+                    MimeType: decfile.MimeType,
                     ParentId: parentId
                 };
                 return this._http.post<EncryptedFile>('/api/files', encFile);

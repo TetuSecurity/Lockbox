@@ -12,6 +12,7 @@ import {DirectoryResolver} from '@resolvers/directory';
             [
                 {path: '', pathMatch: 'full', canActivate: [IsLoggedInGuard], component: FilesystemComponent},
                 {path: ':id', canActivate: [IsLoggedInGuard], component: FilesystemComponent, resolve: {directory: DirectoryResolver}, runGuardsAndResolvers: 'paramsChange'},
+                {path: '**', redirectTo: '/404'}
             ]
         )
     ],
